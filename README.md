@@ -23,6 +23,36 @@ Like the Catcher in the Rye — though perhaps it's *you* who's being caught, be
 
 ---
 
+## How It Works
+
+```
+ ┌──────────┐   raw stdin   ┌─────────────┐   PTY   ┌───────────┐
+ │  You     │ ────────────► │    crai     │ ──────► │  claude   │
+ │  (human) │ ◄──────────── │  (watcher)  │ ◄────── │  (AI CLI) │
+ └──────────┘   raw stdout  └──────┬──────┘         └───────────┘
+                                   │
+                   silence ≥ 1500ms after AI output
+                                   │
+                                   ▼
+                    🔔 afplay Glass.aiff
+                    🪟 Notification Center banner
+                    🔕 terminal bell (\a)
+```
+
+1. Spawns your command inside a **pseudo-terminal (PTY)**
+2. Bridges your raw stdin/stdout through it with zero transformation
+3. Monitors the output stream for **silence** — if no new output arrives for 1500ms, the AI is considered done
+4. On completion: fires three notifications in parallel — a system sound, a Notification Center banner, and a terminal bell
+
+### Smart filtering
+
+- **1:1 prompt gating** — each Enter press arms exactly one notification; AI output with no corresponding prompt (startup banners, unsolicited output) is ignored
+- **Echo suppression** — output arriving within 100ms of a keystroke is treated as PTY echo, not AI output, and ignored
+- **Quick-response suppression** — if the AI responds in under 5 seconds, no notification fires (you're probably still watching)
+- **Typing suppression** — no notification while you're actively composing your next message
+
+---
+
 ## Install
 
 ```sh
@@ -66,36 +96,6 @@ alias claude="crai claude "
 > In bash and zsh, a trailing space in an alias value causes the shell to also expand the next word as an alias. This means any arguments you pass after `claude` are also subject to alias expansion — preserving the full alias magic chain.
 
 Now you just use `claude` as normal. `crai` is silently watching.
-
----
-
-## How It Works
-
-```
- ┌──────────┐   raw stdin   ┌─────────────┐   PTY   ┌───────────┐
- │  You     │ ────────────► │    crai     │ ──────► │  claude   │
- │  (human) │ ◄──────────── │  (watcher)  │ ◄────── │  (AI CLI) │
- └──────────┘   raw stdout  └──────┬──────┘         └───────────┘
-                                   │
-                   silence ≥ 1500ms after AI output
-                                   │
-                                   ▼
-                    🔔 afplay Glass.aiff
-                    🪟 Notification Center banner
-                    🔕 terminal bell (\a)
-```
-
-1. Spawns your command inside a **pseudo-terminal (PTY)**
-2. Bridges your raw stdin/stdout through it with zero transformation
-3. Monitors the output stream for **silence** — if no new output arrives for 1500ms, the AI is considered done
-4. On completion: fires three notifications in parallel — a system sound, a Notification Center banner, and a terminal bell
-
-### Smart filtering
-
-- **1:1 prompt gating** — each Enter press arms exactly one notification; AI output with no corresponding prompt (startup banners, unsolicited output) is ignored
-- **Echo suppression** — output arriving within 100ms of a keystroke is treated as PTY echo, not AI output, and ignored
-- **Quick-response suppression** — if the AI responds in under 5 seconds, no notification fires (you're probably still watching)
-- **Typing suppression** — no notification while you're actively composing your next message
 
 ---
 
