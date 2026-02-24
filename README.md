@@ -85,17 +85,25 @@ Now you just use `claude` as normal. `crai` is silently watching.
  │  (human) │ ◄──────────── │  (watcher)  │ ◄────── │  (AI CLI) │
  └──────────┘   raw stdout  └──────┬──────┘         └───────────┘
                                    │
-                     detects ❯  or > in output
+                   silence ≥ 1500ms after AI output
                                    │
                                    ▼
-                          🔔 afplay Glass.aiff
+                    🔔 afplay Glass.aiff
+                    🪟 Notification Center banner
+                    🔕 terminal bell (\a)
 ```
 
 1. Spawns your command inside a **pseudo-terminal (PTY)**
 2. Bridges your raw stdin/stdout through it with zero transformation
-3. Monitors the PTY output stream for the AI's input prompt (`❯ ` / `> `)
-4. On detection: fires `afplay /System/Library/Sounds/Glass.aiff` asynchronously
+3. Monitors the output stream for **silence** — if no new output arrives for 1500ms, the AI is considered done
+4. On completion: fires three notifications in parallel — a system sound, a Notification Center banner, and a terminal bell
 5. Returns to silence. Waiting. Watching.
+
+### Smart filtering
+
+- **Echo suppression** — output arriving within 100ms of a keystroke is treated as PTY echo, not AI output, and ignored
+- **Quick-response suppression** — if the AI responds in under 5 seconds, no notification fires (you're probably still watching)
+- **Startup suppression** — no notification until you've pressed Enter at least once, so startup banners don't trigger a false alert
 
 ---
 
@@ -116,8 +124,8 @@ The tool's function, plainly stated: it **cries out** to notify the developer. W
 
 ## Requirements
 
-- macOS (uses `afplay` for audio)
-- A command-line AI tool that uses `❯ ` or `> ` as its input prompt
+- macOS (uses `afplay` for audio and `osascript` for Notification Center banners)
+- Any command-line AI tool (or other long-running interactive CLI)
 
 ---
 
