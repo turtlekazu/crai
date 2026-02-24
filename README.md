@@ -1,10 +1,7 @@
-# crai (catcher in the rAI)
-*(pronounced: cry)*
-
 | English | [日本語](README-ja.md) |
 |:---:|:---:|
 
-> *"I thought what I'd do was, I'd pretend I was one of those deaf-mutes... until the AI finishes its thought."*
+# crai (catcher in the rAI)
 
 ---
 
@@ -18,9 +15,11 @@
   catcher in the rAI
 ```
 
-A **fully transparent PTY proxy** that wraps any interactive AI CLI — like Claude Code — and notifies you the moment it goes quiet.
+`crai` detects the moment your AI agent finishes a long response and notifies you — with sound and a Notification Center banner.
 
-Submit a prompt. Step away. `crai` watches in silence, and speaks only when the AI is done.
+No more staring at the terminal while the AI thinks. No more context-switching your brain every few minutes just to check if it's done. Submit your prompt, step away, and come back exactly when you're needed.
+
+> *"I thought what I'd do was, I'd pretend I was one of those deaf-mutes... until the AI finishes its thought."*
 
 ---
 
