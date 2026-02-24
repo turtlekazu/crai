@@ -15,7 +15,7 @@
   catcher in the rAI
 ```
 
-AI Agent が長い思考を終えて回答を出力し終えたタイミングを検知し、音とバナーで通知する CLI ツールです。
+AI Agent が長い思考を終えて回答を出力し終えたタイミングを検知し、音とバナーで通知する CLI ツールです。Claude Code, Codex, Gemini CLI などのコマンドライン AI ツールと一緒に使うことを想定しています。
 
 ライ麦畑のキャッチャーのように——もっとも、捕まえてもらっているのは、別のコンテキストの深みにはまり込んでしまう前のあなた自身、なのかもしれません。
 
@@ -126,7 +126,7 @@ crai --sound /System/Library/Sounds/Ping.aiff claude
 ## 動作環境
 
 - macOS（音声に `afplay`、通知センターに `osascript` を使用）
-- 任意のコマンドライン AI ツール（または他の長時間実行インタラクティブ CLI）
+- 任意のコマンドライン AI ツール（Claude Code, Codex, Gemini CLI など）
 
 ---
 

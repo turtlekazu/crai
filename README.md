@@ -15,7 +15,7 @@
   catcher in the rAI
 ```
 
-A CLI tool that detects when your AI agent finishes a long response and notifies you — with sound and a Notification Center banner.
+A CLI tool that detects when your AI agent finishes a long response and notifies you — with sound and a Notification Center banner. Designed to work alongside command-line AI tools such as Claude Code, Codex, and Gemini CLI.
 
 Like the Catcher in the Rye — though perhaps it's *you* who's being caught, before your mind falls too deep into another context.
 
@@ -126,7 +126,7 @@ Any `.aiff` or `.mp3` file can be specified.
 ## Requirements
 
 - macOS (uses `afplay` for audio and `osascript` for Notification Center banners)
-- Any command-line AI tool (or other long-running interactive CLI)
+- Any command-line AI tool — Claude Code, Codex, Gemini CLI, and more
 
 ---
 
