@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -31,13 +32,22 @@ const (
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: crai <command> [args...]\n")
-		fmt.Fprintf(os.Stderr, "Example: crai claude --dangerously-skip-permissions\n")
+	noBanner := flag.Bool("no-banner", false, "suppress Notification Center banner")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: crai [options] <command> [args...]\n")
+		fmt.Fprintf(os.Stderr, "Example: crai claude --dangerously-skip-permissions\n\n")
+		fmt.Fprintf(os.Stderr, "Options:\n")
+		flag.PrintDefaults()
+	}
+	flag.Parse()
+
+	args := flag.Args()
+	if len(args) == 0 {
+		flag.Usage()
 		os.Exit(1)
 	}
 
-	cmd := exec.Command(os.Args[1], os.Args[2:]...)
+	cmd := exec.Command(args[0], args[1:]...)
 
 	ptmx, err := pty.Start(cmd)
 	if err != nil {
@@ -86,7 +96,9 @@ func main() {
 				state = stateNotified
 				notificationPending = false
 				exec.Command("afplay", "/System/Library/Sounds/Glass.aiff").Start()
-				exec.Command("osascript", "-e", `display notification "AI finished" with title "crai"`).Start()
+				if !*noBanner {
+					exec.Command("osascript", "-e", `display notification "AI finished" with title "crai"`).Start()
+				}
 				os.Stdout.Write([]byte("\a"))
 			}
 			mu.Unlock()
