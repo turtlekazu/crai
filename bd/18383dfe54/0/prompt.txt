@@ -1,0 +1,17 @@
+READMEを最新にして
+
+---
+
+バナーの箇所は通知センターバナーのままでいいかもです
+
+---
+
+インストールURLも戻して
+
+---
+
+main.goをさらに可読性の高い実装にリファクタして
+
+---
+
+[Request interrupted by user for tool use]
