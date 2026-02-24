@@ -108,6 +108,19 @@ Now you just use `claude` as normal. `crai` is silently watching.
 | `--no-sound` | suppress sound |
 | `--sound <path>` | path to sound file played on completion (default: `Glass.aiff`) |
 
+macOS ships with the following sounds in `/System/Library/Sounds/`:
+
+```
+Basso  Blow  Bottle  Frog  Funk  Glass  Hero
+Morse  Ping  Pop     Purr  Sosumi  Submarine  Tink
+```
+
+```sh
+crai --sound /System/Library/Sounds/Ping.aiff claude
+```
+
+Any `.aiff` or `.mp3` file can be specified.
+
 ---
 
 ## Requirements

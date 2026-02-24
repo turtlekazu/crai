@@ -108,6 +108,19 @@ alias claude="crai claude "
 | `--no-sound` | サウンドを無効化 |
 | `--sound <path>` | 完了時に再生するサウンドファイルのパス（デフォルト: `Glass.aiff`） |
 
+macOS には `/System/Library/Sounds/` に以下のサウンドが収録されている：
+
+```
+Basso  Blow  Bottle  Frog  Funk  Glass  Hero
+Morse  Ping  Pop     Purr  Sosumi  Submarine  Tink
+```
+
+```sh
+crai --sound /System/Library/Sounds/Ping.aiff claude
+```
+
+`.aiff` や `.mp3` など任意のファイルを指定することもできる。
+
 ---
 
 ## 動作環境
