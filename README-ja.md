@@ -118,7 +118,7 @@ alias claude="crai claude "
 
 ## ライセンス
 
-MIT.
+[MIT](LICENSE.md).
 
 ---
 

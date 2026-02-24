@@ -118,7 +118,7 @@ Now you just use `claude` as normal. `crai` is silently watching.
 
 ## License
 
-MIT.
+[MIT](LICENSE.md).
 
 ---
 
