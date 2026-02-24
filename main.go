@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -72,7 +71,6 @@ func main() {
 	var lastInput time.Time      // zero value; notificationPending=false blocks startup notifications
 	var workingStarted time.Time // when the current AI working session began
 	submitted := false           // true once the user has pressed Enter at least once
-	var displayPrompt string     // prompt text shown in notification
 	notificationPending := false // true from Enter until the resulting notification fires
 
 	// Watcher goroutine: fires notification after silenceThreshold of inactivity
@@ -87,19 +85,8 @@ func main() {
 				time.Since(workingStarted) >= minWorkingDuration {
 				state = stateNotified
 				notificationPending = false
-
-				msg := "AI finished"
-				if dp := displayPrompt; dp != "" {
-					runes := []rune(dp)
-					if len(runes) > 50 {
-						dp = string(runes[:50]) + "..."
-					}
-					dp = strings.ReplaceAll(dp, `"`, `'`)
-					msg = "AI finished: " + dp
-				}
-
 				exec.Command("afplay", "/System/Library/Sounds/Glass.aiff").Start()
-				exec.Command("osascript", "-e", `display notification "`+msg+`" with title "crai"`).Start()
+				exec.Command("osascript", "-e", `display notification "AI finished" with title "crai"`).Start()
 				os.Stdout.Write([]byte("\a"))
 			}
 			mu.Unlock()
@@ -135,67 +122,24 @@ func main() {
 		}
 	}()
 
-	// stdin -> PTY (manual loop to track last keystroke time and buffer prompt text)
+	// stdin -> PTY (manual loop to track last keystroke time)
 	go func() {
 		buf := make([]byte, 256)
-		var promptBuf []byte // local: accumulates the current input line
-		inEsc := false       // inside an escape sequence
-		escStep := 0         // 1 = saw ESC, 2 = saw ESC [ or ESC O
-
 		for {
 			n, err := os.Stdin.Read(buf)
 			if n > 0 {
 				ptmx.Write(buf[:n])
 				mu.Lock()
 				lastInput = time.Now()
-
 				for i := 0; i < n; i++ {
-					b := buf[i]
-
-					// Escape sequence state machine: skip arrow keys, function keys, etc.
-					if inEsc {
-						switch escStep {
-						case 1: // after ESC
-							if b == '[' || b == 'O' {
-								escStep = 2
-							} else {
-								inEsc = false
-								escStep = 0
-							}
-						case 2: // in CSI / SS3: wait for final byte (0x40-0x7E)
-							if b >= 0x40 && b <= 0x7E {
-								inEsc = false
-								escStep = 0
-							}
-						}
-						continue
-					}
-
-					switch {
-					case b == 0x1B: // ESC - start of escape sequence
-						inEsc = true
-						escStep = 1
-					case b == 0x7F: // backspace - remove last rune from buffer
-						s := string(promptBuf)
-						runes := []rune(s)
-						if len(runes) > 0 {
-							promptBuf = []byte(string(runes[:len(runes)-1]))
-						}
-					case b == '\r': // Enter - submit
+					if buf[i] == '\r' { // Enter in raw mode
 						if !submitted {
 							submitted = true
 						}
-						displayPrompt = string(promptBuf)
-						promptBuf = promptBuf[:0]
 						notificationPending = true
-					case b < 0x20:
-						// skip other control characters
-					default:
-						// printable ASCII or UTF-8 continuation / lead byte
-						promptBuf = append(promptBuf, b)
+						break
 					}
 				}
-
 				mu.Unlock()
 			}
 			if err != nil {
