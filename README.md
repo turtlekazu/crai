@@ -106,6 +106,7 @@ Now you just use `claude` as normal. `crai` is silently watching.
 | `--no-banner` | suppress Notification Center banner |
 | `--no-sound` | suppress sound |
 | `--sound <path>` | path to sound file played on completion (default: `Glass.aiff`) |
+| `--silence <ms>` | silence threshold in milliseconds before notification fires (default: `1500`) |
 
 macOS ships with the following sounds in `/System/Library/Sounds/`:
 

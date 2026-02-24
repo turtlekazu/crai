@@ -106,6 +106,7 @@ alias claude="crai claude "
 | `--no-banner` | 通知センターバナーを無効化します |
 | `--no-sound` | サウンドを無効化します |
 | `--sound <path>` | 完了時に再生するサウンドファイルのパス（デフォルト: `Glass.aiff`） |
+| `--silence <ms>` | 通知を発火するまでの沈黙時間（ミリ秒、デフォルト: `1500`） |
 
 macOS には `/System/Library/Sounds/` に以下のサウンドが収録されています：
 

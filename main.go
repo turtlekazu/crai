@@ -86,7 +86,7 @@ func notify(agentName string, noSound bool, soundFile string, noBanner bool) {
 }
 
 // watchAndNotify polls every 100ms and fires a notification when silence conditions are met.
-func (m *monitor) watchAndNotify(agentName string, noSound bool, soundFile string, noBanner bool) {
+func (m *monitor) watchAndNotify(agentName string, noSound bool, soundFile string, noBanner bool, silenceThreshold time.Duration) {
 	for {
 		time.Sleep(100 * time.Millisecond)
 		m.mu.Lock()
@@ -159,6 +159,7 @@ func main() {
 	noBanner := flag.Bool("no-banner", false, "suppress Notification Center banner")
 	noSound := flag.Bool("no-sound", false, "suppress sound")
 	soundFile := flag.String("sound", "/System/Library/Sounds/Glass.aiff", "path to sound file played on completion")
+	silenceMs := flag.Int("silence", 1500, "silence threshold in milliseconds before notification fires")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: crai [options] <command> [args...]\n")
 		fmt.Fprintf(os.Stderr, "Example: crai claude --dangerously-skip-permissions\n\n")
@@ -204,7 +205,7 @@ func main() {
 
 	m := &monitor{lastOutput: time.Now()}
 
-	go m.watchAndNotify(agentName, *noSound, *soundFile, *noBanner)
+	go m.watchAndNotify(agentName, *noSound, *soundFile, *noBanner, time.Duration(*silenceMs)*time.Millisecond)
 	go m.copyPTYToStdout(ptmx)
 	go m.copyStdinToPTY(ptmx)
 
