@@ -83,6 +83,8 @@ func main() {
 				time.Since(workingStarted) >= minWorkingDuration {
 				state = stateNotified
 				exec.Command("afplay", "/System/Library/Sounds/Glass.aiff").Start()
+				exec.Command("osascript", "-e", `display notification "AI finished" with title "crai"`).Start()
+				os.Stdout.Write([]byte("\a"))
 			}
 			mu.Unlock()
 		}
