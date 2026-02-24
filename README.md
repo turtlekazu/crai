@@ -1,4 +1,4 @@
-# crai (Catcher in the rAI)
+# crai (catcher in the rAI)
 *(pronounced: cry)*
 
 | English | [日本語](README-ja.md) |
@@ -15,7 +15,7 @@
  ██║      ██╔══██╗██╔══██║██║
  ╚██████╗ ██║  ██║██║  ██║██║
   ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝
-  Catcher in the rAI
+  catcher in the rAI
 ```
 
 A **fully transparent PTY proxy** that wraps any interactive AI CLI — like Claude Code — and notifies you the moment it goes quiet.

@@ -1,4 +1,4 @@
-# crai (Catcher in the rAI)
+# crai (catcher in the rAI)
 *(読み方: cry)*
 
 | [English](README.md) | 日本語 |
@@ -15,7 +15,7 @@
  ██║      ██╔══██╗██╔══██║██║
  ╚██████╗ ██║  ██║██║  ██║██║
   ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝
-  Catcher in the rAI
+  catcher in the rAI
 ```
 
 Claude Code などのインタラクティブな AI CLI を包む、**完全透過の PTY プロキシ**。AI が静かになった瞬間に知らせてくれる。
