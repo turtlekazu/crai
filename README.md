@@ -101,9 +101,10 @@ Now you just use `claude` as normal. `crai` is silently watching.
 
 ### Smart filtering
 
+- **1:1 prompt gating** — each Enter press arms exactly one notification; AI output with no corresponding prompt (startup banners, unsolicited output) is ignored
 - **Echo suppression** — output arriving within 100ms of a keystroke is treated as PTY echo, not AI output, and ignored
 - **Quick-response suppression** — if the AI responds in under 5 seconds, no notification fires (you're probably still watching)
-- **Startup suppression** — no notification until you've pressed Enter at least once, so startup banners don't trigger a false alert
+- **Typing suppression** — no notification while you're actively composing your next message
 
 ---
 
