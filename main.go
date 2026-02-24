@@ -78,6 +78,7 @@ func main() {
 			mu.Lock()
 			if state == stateWorking &&
 				time.Since(lastOutput) >= silenceThreshold &&
+				time.Since(lastInput) >= silenceThreshold &&
 				time.Since(workingStarted) >= minWorkingDuration {
 				state = stateNotified
 				exec.Command("afplay", "/System/Library/Sounds/Glass.aiff").Start()
