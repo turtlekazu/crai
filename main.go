@@ -69,10 +69,11 @@ func main() {
 	var mu sync.Mutex
 	state := stateIdle
 	lastOutput := time.Now()
-	lastInput := time.Now() // initialized to now so startup output is not treated as AI output
+	var lastInput time.Time      // zero value; notificationPending=false blocks startup notifications
 	var workingStarted time.Time // when the current AI working session began
 	submitted := false           // true once the user has pressed Enter at least once
-	var displayPrompt string // prompt text shown in notification
+	var displayPrompt string     // prompt text shown in notification
+	notificationPending := false // true from Enter until the resulting notification fires
 
 	// Watcher goroutine: fires notification after silenceThreshold of inactivity
 	go func() {
@@ -80,16 +81,18 @@ func main() {
 			time.Sleep(100 * time.Millisecond)
 			mu.Lock()
 			if state == stateWorking &&
+				notificationPending &&
 				time.Since(lastOutput) >= silenceThreshold &&
 				time.Since(lastInput) >= silenceThreshold &&
 				time.Since(workingStarted) >= minWorkingDuration {
 				state = stateNotified
+				notificationPending = false
 
 				msg := "AI finished"
 				if dp := displayPrompt; dp != "" {
 					runes := []rune(dp)
 					if len(runes) > 50 {
-						dp = string(runes[:50]) + "…"
+						dp = string(runes[:50]) + "..."
 					}
 					dp = strings.ReplaceAll(dp, `"`, `'`)
 					msg = "AI finished: " + dp
@@ -103,7 +106,7 @@ func main() {
 		}
 	}()
 
-	// PTY → stdout
+	// PTY -> stdout
 	go func() {
 		buf := make([]byte, 4096)
 		for {
@@ -132,7 +135,7 @@ func main() {
 		}
 	}()
 
-	// stdin → PTY (manual loop to track last keystroke time and buffer prompt text)
+	// stdin -> PTY (manual loop to track last keystroke time and buffer prompt text)
 	go func() {
 		buf := make([]byte, 256)
 		var promptBuf []byte // local: accumulates the current input line
@@ -159,7 +162,7 @@ func main() {
 								inEsc = false
 								escStep = 0
 							}
-						case 2: // in CSI / SS3: wait for final byte (0x40–0x7E)
+						case 2: // in CSI / SS3: wait for final byte (0x40-0x7E)
 							if b >= 0x40 && b <= 0x7E {
 								inEsc = false
 								escStep = 0
@@ -169,21 +172,22 @@ func main() {
 					}
 
 					switch {
-					case b == 0x1B: // ESC — start of escape sequence
+					case b == 0x1B: // ESC - start of escape sequence
 						inEsc = true
 						escStep = 1
-					case b == 0x7F: // backspace — remove last rune from buffer
+					case b == 0x7F: // backspace - remove last rune from buffer
 						s := string(promptBuf)
 						runes := []rune(s)
 						if len(runes) > 0 {
 							promptBuf = []byte(string(runes[:len(runes)-1]))
 						}
-					case b == '\r': // Enter — submit
+					case b == '\r': // Enter - submit
 						if !submitted {
 							submitted = true
 						}
 						displayPrompt = string(promptBuf)
 						promptBuf = promptBuf[:0]
+						notificationPending = true
 					case b < 0x20:
 						// skip other control characters
 					default:
