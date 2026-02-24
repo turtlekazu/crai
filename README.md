@@ -56,13 +56,13 @@ Like a catcher in the semiconductor fields — though standing at the cliff's ed
 ## Install
 
 ```sh
-brew install your-name/tap/crai
+brew install turtlekazu/tap/crai
 ```
 
 Or build from source:
 
 ```sh
-git clone https://github.com/your-name/crai
+git clone https://github.com/turtlekazu/crai
 cd crai
 go build -o crai .
 sudo mv crai /usr/local/bin/
