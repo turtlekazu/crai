@@ -17,6 +17,8 @@
 
 A CLI tool that detects when your AI agent finishes a long response and notifies you — with sound and a Notification Center banner.
 
+Like the Catcher in the Rye — though perhaps it's *you* who's being caught, before your mind falls too deep into another context.
+
 > *"I thought what I'd do was, I'd pretend I was one of those deaf-mutes... until the AI finishes its thought."*
 
 ---
