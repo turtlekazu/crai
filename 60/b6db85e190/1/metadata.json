@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "60b6db85e190",
+  "session_id": "c8002c57-3b2d-4687-8549-29f941932054",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-24T09:09:59.274535Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "main.go"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "548c85c15670",
+  "token_usage": {
+    "input_tokens": 14,
+    "cache_creation_tokens": 24395,
+    "cache_read_tokens": 205576,
+    "output_tokens": 74,
+    "api_call_count": 8
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-24T09:09:59.248986Z",
+    "agent_lines": 113,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 113,
+    "agent_percentage": 100
+  },
+  "transcript_path": ".claude-personal/projects/-Users-turtlekazu-GoProjects-catcher-in-the-rai/c8002c57-3b2d-4687-8549-29f941932054.jsonl"
+}

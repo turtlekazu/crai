@@ -1,0 +1,50 @@
+Implement the following plan:
+
+# main.go リファクタリング計画
+
+## Context
+`main()` にビジネスロジック・共有状態・goroutine が混在して可読性が低い。動作を変えずに構造を整理する。
+
+## 変更方針（最小限の抽象化）
+
+### 1. `monitor` struct の導入
+6つの共有変数 + `sync.Mutex` を1つの struct に集約。
+`state` のゼロ値は `stateIdle`（= 0）なので、初期化は `lastOutput: time.Now()` のみ。
+
+### 2. goroutine を名前付きメソッドに切り出す
+
+| メソッド | 責務 |
+|---|---|
+| `(m *monitor) watchAndNotify(...)` | 100ms ポーリング → 条件判定 → 通知 |
+| `(m *monitor) copyPTYToStdout(ptmx)` | PTY → stdout コピーループ |
+| `(m *monitor) copyStdinToPTY(ptmx)` | stdin → PTY コピーループ |
+
+### 3. 状態更新を小さなメソッドに切り出す
+- `(m *monitor) onPTYOutput()` — AI出力検出時のステート更新（ロック付き）
+- `(m *monitor) onStdinInput(data []byte)` — キー入力時のステート更新（ロック付き）
+
+### 4. `notify()` を独立関数に
+通知発火をロック外で行う。`watchAndNotify` 内でロック解放後に呼ぶ。
+
+### 5. 細かい改善
+- `for i := 0; i < n; i++` → `for _, b := range data`（インデックス変数を消す）
+
+### 6. `main()` の役割の純化
+フラグ解析・PTY起動・raw mode設定・goroutine 配線の4段階だけに絞る。
+
+## 対象ファイル
+- `/Users/turtlekazu/GoProjects/catcher-in-the-rai/main.go`（1ファイルのみ）
+
+## 確認方法
+`go build -o crai . && ./crai claude` で実際に動作確認。
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/turtlekazu/.REDACTED.jsonl
+
+---
+
+ロジックに変更がないかどうか、チェックしてください
+
+---
+
+コミットして
