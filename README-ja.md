@@ -106,6 +106,7 @@ alias claude="crai claude "
 |--------|------|
 | `--no-banner` | 通知センターバナーを無効化 |
 | `--no-sound` | サウンドを無効化 |
+| `--sound <path>` | 完了時に再生するサウンドファイルのパス（デフォルト: `Glass.aiff`） |
 
 ---
 
