@@ -17,7 +17,7 @@
 
 A CLI tool that detects when your AI agent finishes a long response and notifies you — with sound and a Notification Center banner. Designed to work alongside command-line AI tools such as Claude Code, Codex, and Gemini CLI.
 
-Like the Catcher in the Rye — though perhaps it's *you* who's being caught, before your mind falls too deep into another context.
+Like a catcher in the semiconductor fields — though standing at the cliff's edge, catching both the AI agents running wild and your own consciousness before it falls into the depths of another context.
 
 > *"I thought what I'd do was, I'd pretend I was one of those deaf-mutes... until the AI finishes its thought."*
 
