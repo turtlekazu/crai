@@ -70,6 +70,7 @@ func main() {
 	lastOutput := time.Now()
 	lastInput := time.Now() // initialized to now so startup output is not treated as AI output
 	var workingStarted time.Time // when the current AI working session began
+	submitted := false // true once the user has pressed Enter at least once
 
 	// Watcher goroutine: fires notification after silenceThreshold of inactivity
 	go func() {
@@ -96,9 +97,9 @@ func main() {
 				os.Stdout.Write(buf[:n])
 
 				mu.Lock()
-				// Only treat as AI output if it arrives well after the last keystroke.
-				// Output within echoWindow is considered a PTY echo of user input.
-				if time.Since(lastInput) >= echoWindow {
+				// Only treat as AI output after the user has submitted at least once,
+				// and the output arrives well after the last keystroke (not an echo).
+				if submitted && time.Since(lastInput) >= echoWindow {
 					lastOutput = time.Now()
 					if state != stateWorking {
 						workingStarted = time.Now()
@@ -125,6 +126,14 @@ func main() {
 				ptmx.Write(buf[:n])
 				mu.Lock()
 				lastInput = time.Now()
+				if !submitted {
+					for i := 0; i < n; i++ {
+						if buf[i] == '\r' { // Enter in raw mode
+							submitted = true
+							break
+						}
+					}
+				}
 				mu.Unlock()
 			}
 			if err != nil {
