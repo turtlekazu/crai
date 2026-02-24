@@ -18,19 +18,9 @@
   Catcher in the rAI
 ```
 
-A **fully transparent PTY proxy** that wraps any interactive AI CLI — like Claude Code — and cries out the moment the AI finishes its thought.
+A **fully transparent PTY proxy** that wraps any interactive AI CLI — like Claude Code — and notifies you the moment it goes quiet.
 
----
-
-## The Deal
-
-You launch your AI. It starts writing code, spinning its gears, thinking in silicon silence.
-
-You? You go back to work — headphones on, eyes elsewhere, pretending you're deaf-mute to the machine. No tab-switching. No anxiety-polling. No `"is it done yet?"`.
-
-The moment the AI returns to its prompt — waiting for your next command — `crai` shatters the silence. A single chime. Glass breaking.
-
-**That's your cue. Come back.**
+Submit a prompt. Step away. `crai` watches in silence, and speaks only when the AI is done.
 
 ---
 
@@ -65,7 +55,7 @@ Everything is passed through as-is. Colors, spinners, keybindings — all intact
 
 ---
 
-## Alias Magic
+## Alias
 
 Add this to your shell config (`~/.zshrc` or `~/.bashrc`):
 
@@ -100,7 +90,6 @@ Now you just use `claude` as normal. `crai` is silently watching.
 2. Bridges your raw stdin/stdout through it with zero transformation
 3. Monitors the output stream for **silence** — if no new output arrives for 1500ms, the AI is considered done
 4. On completion: fires three notifications in parallel — a system sound, a Notification Center banner, and a terminal bell
-5. Returns to silence. Waiting. Watching.
 
 ### Smart filtering
 
@@ -111,18 +100,12 @@ Now you just use `claude` as normal. `crai` is silently watching.
 
 ---
 
-## Etymology / Lore
+## Options
 
-The name `crai` carries three meanings simultaneously:
-
-### 1. **C**atcher in the **rAI**
-An homage to J.D. Salinger's *The Catcher in the Rye* — the novel that Aoi, the Laughing Man of *Ghost in the Shell: S.A.C.*, carried as his manifesto. He embedded its opening quote into a corporate logo, invisible to everyone who wasn't looking. `crai` is invisible too — until it speaks.
-
-### 2. The Laughing Man vs. The Crying One
-Aoi was *the Laughing Man* — silent, masked, untraceable. This tool is his shadow: **the Crying Man**. Where he embraced silence, `crai` breaks it. A melancholic counterpart to the ghost who never spoke.
-
-### 3. Crying Out
-The tool's function, plainly stated: it **cries out** to notify the developer. When the AI finishes its thought and returns to the prompt, `crai` is the voice that says *"hey. it's done."*
+| Flag | Description |
+|------|-------------|
+| `--no-banner` | suppress Notification Center banner |
+| `--no-sound` | suppress sound |
 
 ---
 
@@ -135,11 +118,9 @@ The tool's function, plainly stated: it **cries out** to notify the developer. W
 
 ## License
 
-MIT. Do whatever you want with it. Salinger would probably hate that.
+MIT.
 
 ---
 
 *"Don't ever tell anybody anything. If you do, you start missing everybody."*
 — J.D. Salinger, *The Catcher in the Rye*
-
-*(Unless the AI finishes. Then crai tells you everything.)*
