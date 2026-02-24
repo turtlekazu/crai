@@ -15,9 +15,7 @@
   catcher in the rAI
 ```
 
-`crai` detects the moment your AI agent finishes a long response and notifies you — with sound and a Notification Center banner.
-
-No more staring at the terminal while the AI thinks. No more context-switching your brain every few minutes just to check if it's done. Submit your prompt, step away, and come back exactly when you're needed.
+A CLI tool that detects when your AI agent finishes a long response and notifies you — with sound and a Notification Center banner.
 
 > *"I thought what I'd do was, I'd pretend I was one of those deaf-mutes... until the AI finishes its thought."*
 
