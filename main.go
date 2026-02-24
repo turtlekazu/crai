@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -32,45 +33,19 @@ const (
 	minWorkingDuration = 5 * time.Second
 )
 
-// stripANSI removes ANSI/VT escape sequences from b, returning plain text.
-func stripANSI(b []byte) string {
-	out := make([]byte, 0, len(b))
-	i := 0
-	for i < len(b) {
-		if b[i] != 0x1B {
-			out = append(out, b[i])
-			i++
-			continue
-		}
-		i++ // skip ESC
-		if i >= len(b) {
-			break
-		}
-		switch b[i] {
-		case '[': // CSI — skip until final byte (0x40–0x7E)
-			i++
-			for i < len(b) && !(b[i] >= 0x40 && b[i] <= 0x7E) {
-				i++
-			}
-			i++
-		case ']': // OSC — skip until BEL or ST
-			i++
-			for i < len(b) {
-				if b[i] == 0x07 {
-					i++
-					break
-				}
-				if b[i] == 0x1B && i+1 < len(b) && b[i+1] == '\\' {
-					i += 2
-					break
-				}
-				i++
-			}
-		default: // other two-byte ESC sequences
-			i++
-		}
+// agentDisplayName returns a human-readable name for the wrapped command.
+func agentDisplayName(cmd string) string {
+	base := filepath.Base(cmd)
+	switch base {
+	case "claude":
+		return "Claude Code"
+	case "gemini":
+		return "Gemini"
 	}
-	return string(out)
+	if len(base) > 0 {
+		return strings.ToUpper(base[:1]) + base[1:]
+	}
+	return "AI"
 }
 
 func main() {
@@ -90,6 +65,8 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
+
+	agentName := agentDisplayName(args[0])
 
 	cmd := exec.Command(args[0], args[1:]...)
 
@@ -126,7 +103,6 @@ func main() {
 	var workingStarted time.Time // when the current AI working session began
 	submitted := false           // true once the user has pressed Enter at least once
 	notificationPending := false // true from Enter until the resulting notification fires
-	var lastAILine string        // last non-empty text line from AI output
 
 	// Watcher goroutine: fires notification after silenceThreshold of inactivity
 	go func() {
@@ -141,16 +117,7 @@ func main() {
 				state = stateNotified
 				notificationPending = false
 
-				msg := "AI finished"
-				if lastAILine != "" {
-					line := lastAILine
-					runes := []rune(line)
-					if len(runes) > 50 {
-						line = string(runes[:50]) + "..."
-					}
-					line = strings.ReplaceAll(line, `"`, `'`)
-					msg = "AI finished: " + line
-				}
+				msg := agentName + " finished"
 
 				if !*noSound {
 					exec.Command("afplay", *soundFile).Start()
@@ -179,20 +146,8 @@ func main() {
 					lastOutput = time.Now()
 					if state != stateWorking {
 						workingStarted = time.Now()
-						lastAILine = "" // reset for new working session
 					}
 					state = stateWorking
-
-					// Track the last non-empty text line for the notification banner.
-					// \r within a segment overwrites earlier content on the same line.
-					text := stripANSI(buf[:n])
-					for _, segment := range strings.Split(text, "\n") {
-						parts := strings.Split(segment, "\r")
-						line := strings.TrimSpace(parts[len(parts)-1])
-						if line != "" {
-							lastAILine = line
-						}
-					}
 				}
 				mu.Unlock()
 			}
