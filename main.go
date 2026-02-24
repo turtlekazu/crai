@@ -20,7 +20,15 @@ const (
 	stateNotified        // notified; waiting for next output burst to reset
 )
 
-const silenceThreshold = 1500 * time.Millisecond
+const (
+	silenceThreshold   = 1500 * time.Millisecond
+	// PTY echo arrives within a few ms of input; LLM first-token latency is 100ms+.
+	// Treat output as AI output only when it arrives this long after the last keystroke.
+	echoWindow         = 100 * time.Millisecond
+	// Don't notify if the AI finished in less than this duration (quick responses
+	// don't need an audible alert because the developer is likely still watching).
+	minWorkingDuration = 5 * time.Second
+)
 
 func main() {
 	if len(os.Args) < 2 {
@@ -60,13 +68,17 @@ func main() {
 	var mu sync.Mutex
 	state := stateIdle
 	lastOutput := time.Now()
+	lastInput := time.Now() // initialized to now so startup output is not treated as AI output
+	var workingStarted time.Time // when the current AI working session began
 
 	// Watcher goroutine: fires notification after silenceThreshold of inactivity
 	go func() {
 		for {
 			time.Sleep(100 * time.Millisecond)
 			mu.Lock()
-			if state == stateWorking && time.Since(lastOutput) >= silenceThreshold {
+			if state == stateWorking &&
+				time.Since(lastOutput) >= silenceThreshold &&
+				time.Since(workingStarted) >= minWorkingDuration {
 				state = stateNotified
 				exec.Command("afplay", "/System/Library/Sounds/Glass.aiff").Start()
 			}
@@ -83,10 +95,15 @@ func main() {
 				os.Stdout.Write(buf[:n])
 
 				mu.Lock()
-				lastOutput = time.Now()
-				// Reset to WORKING whenever new output arrives
-				// (covers both IDLE→WORKING and NOTIFIED→WORKING)
-				state = stateWorking
+				// Only treat as AI output if it arrives well after the last keystroke.
+				// Output within echoWindow is considered a PTY echo of user input.
+				if time.Since(lastInput) >= echoWindow {
+					lastOutput = time.Now()
+					if state != stateWorking {
+						workingStarted = time.Now()
+					}
+					state = stateWorking
+				}
 				mu.Unlock()
 			}
 			if err != nil {
@@ -98,9 +115,21 @@ func main() {
 		}
 	}()
 
-	// stdin → PTY
+	// stdin → PTY (manual loop to track last keystroke time)
 	go func() {
-		io.Copy(ptmx, os.Stdin)
+		buf := make([]byte, 256)
+		for {
+			n, err := os.Stdin.Read(buf)
+			if n > 0 {
+				ptmx.Write(buf[:n])
+				mu.Lock()
+				lastInput = time.Now()
+				mu.Unlock()
+			}
+			if err != nil {
+				break
+			}
+		}
 	}()
 
 	cmd.Wait()
