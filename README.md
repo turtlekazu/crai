@@ -34,9 +34,9 @@ Like the Catcher in the Rye — though perhaps it's *you* who's being caught, be
                    silence ≥ 1500ms after AI output
                                    │
                                    ▼
-                    🔔 afplay Glass.aiff
-                    🪟 Notification Center banner
-                    🔕 terminal bell (\a)
+                    🔔 Play Sound
+                    🪟 Notification Center Banner
+                    🔕 Terminal Bell (\a)
 ```
 
 1. Spawns your command inside a **pseudo-terminal (PTY)**
