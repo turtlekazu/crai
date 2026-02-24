@@ -33,6 +33,113 @@ const (
 	minWorkingDuration = 5 * time.Second
 )
 
+type monitor struct {
+	mu                  sync.Mutex
+	state               int
+	lastOutput          time.Time
+	lastInput           time.Time
+	workingStarted      time.Time
+	submitted           bool
+	notificationPending bool
+}
+
+// onPTYOutput updates state when AI output arrives (called with lock held externally).
+func (m *monitor) onPTYOutput() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	// Only treat as AI output after the user has submitted at least once,
+	// and the output arrives well after the last keystroke (not an echo).
+	if m.submitted && time.Since(m.lastInput) >= echoWindow {
+		m.lastOutput = time.Now()
+		if m.state != stateWorking {
+			m.workingStarted = time.Now()
+		}
+		m.state = stateWorking
+	}
+}
+
+// onStdinInput updates state when the user types.
+func (m *monitor) onStdinInput(data []byte) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.lastInput = time.Now()
+	for _, b := range data {
+		if b == '\r' { // Enter in raw mode
+			m.submitted = true
+			m.notificationPending = true
+			break
+		}
+	}
+}
+
+// notify fires the three simultaneous notifications (sound, banner, bell).
+// Must be called without the monitor lock held.
+func notify(agentName string, noSound bool, soundFile string, noBanner bool) {
+	msg := agentName + " finished"
+	if !noSound {
+		exec.Command("afplay", soundFile).Start()
+	}
+	if !noBanner {
+		exec.Command("osascript", "-e", `display notification "`+msg+`" with title "crai"`).Start()
+	}
+	os.Stdout.Write([]byte("\a"))
+}
+
+// watchAndNotify polls every 100ms and fires a notification when silence conditions are met.
+func (m *monitor) watchAndNotify(agentName string, noSound bool, soundFile string, noBanner bool) {
+	for {
+		time.Sleep(100 * time.Millisecond)
+		m.mu.Lock()
+		shouldNotify := m.state == stateWorking &&
+			m.notificationPending &&
+			time.Since(m.lastOutput) >= silenceThreshold &&
+			time.Since(m.lastInput) >= silenceThreshold &&
+			time.Since(m.workingStarted) >= minWorkingDuration
+		if shouldNotify {
+			m.state = stateNotified
+			m.notificationPending = false
+		}
+		m.mu.Unlock()
+
+		if shouldNotify {
+			notify(agentName, noSound, soundFile, noBanner)
+		}
+	}
+}
+
+// copyPTYToStdout streams PTY output to stdout and updates monitor state.
+func (m *monitor) copyPTYToStdout(ptmx *os.File) {
+	buf := make([]byte, 4096)
+	for {
+		n, err := ptmx.Read(buf)
+		if n > 0 {
+			os.Stdout.Write(buf[:n])
+			m.onPTYOutput()
+		}
+		if err != nil {
+			if err != io.EOF {
+				_ = err
+			}
+			break
+		}
+	}
+}
+
+// copyStdinToPTY streams stdin to the PTY and tracks input state.
+func (m *monitor) copyStdinToPTY(ptmx *os.File) {
+	buf := make([]byte, 256)
+	for {
+		n, err := os.Stdin.Read(buf)
+		if n > 0 {
+			ptmx.Write(buf[:n])
+			m.onStdinInput(buf[:n])
+		}
+		if err != nil {
+			break
+		}
+	}
+}
+
 // agentDisplayName returns a human-readable name for the wrapped command.
 func agentDisplayName(cmd string) string {
 	base := filepath.Base(cmd)
@@ -77,7 +184,7 @@ func main() {
 	}
 	defer ptmx.Close()
 
-	// Handle terminal resize signals
+	// Handle terminal resize signals.
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGWINCH)
 	go func() {
@@ -87,7 +194,7 @@ func main() {
 	}()
 	sigCh <- syscall.SIGWINCH // set initial size
 
-	// Switch stdin to raw mode
+	// Switch stdin to raw mode.
 	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "crai: failed to set raw mode: %v\n", err)
@@ -95,96 +202,11 @@ func main() {
 	}
 	defer term.Restore(int(os.Stdin.Fd()), oldState)
 
-	// Silence detection state
-	var mu sync.Mutex
-	state := stateIdle
-	lastOutput := time.Now()
-	var lastInput time.Time      // zero value; notificationPending=false blocks startup notifications
-	var workingStarted time.Time // when the current AI working session began
-	submitted := false           // true once the user has pressed Enter at least once
-	notificationPending := false // true from Enter until the resulting notification fires
+	m := &monitor{lastOutput: time.Now()}
 
-	// Watcher goroutine: fires notification after silenceThreshold of inactivity
-	go func() {
-		for {
-			time.Sleep(100 * time.Millisecond)
-			mu.Lock()
-			if state == stateWorking &&
-				notificationPending &&
-				time.Since(lastOutput) >= silenceThreshold &&
-				time.Since(lastInput) >= silenceThreshold &&
-				time.Since(workingStarted) >= minWorkingDuration {
-				state = stateNotified
-				notificationPending = false
-
-				msg := agentName + " finished"
-
-				if !*noSound {
-					exec.Command("afplay", *soundFile).Start()
-				}
-				if !*noBanner {
-					exec.Command("osascript", "-e", `display notification "`+msg+`" with title "crai"`).Start()
-				}
-				os.Stdout.Write([]byte("\a"))
-			}
-			mu.Unlock()
-		}
-	}()
-
-	// PTY -> stdout
-	go func() {
-		buf := make([]byte, 4096)
-		for {
-			n, err := ptmx.Read(buf)
-			if n > 0 {
-				os.Stdout.Write(buf[:n])
-
-				mu.Lock()
-				// Only treat as AI output after the user has submitted at least once,
-				// and the output arrives well after the last keystroke (not an echo).
-				if submitted && time.Since(lastInput) >= echoWindow {
-					lastOutput = time.Now()
-					if state != stateWorking {
-						workingStarted = time.Now()
-					}
-					state = stateWorking
-				}
-				mu.Unlock()
-			}
-			if err != nil {
-				if err != io.EOF {
-					_ = err
-				}
-				break
-			}
-		}
-	}()
-
-	// stdin -> PTY (manual loop to track last keystroke time)
-	go func() {
-		buf := make([]byte, 256)
-		for {
-			n, err := os.Stdin.Read(buf)
-			if n > 0 {
-				ptmx.Write(buf[:n])
-				mu.Lock()
-				lastInput = time.Now()
-				for i := 0; i < n; i++ {
-					if buf[i] == '\r' { // Enter in raw mode
-						if !submitted {
-							submitted = true
-						}
-						notificationPending = true
-						break
-					}
-				}
-				mu.Unlock()
-			}
-			if err != nil {
-				break
-			}
-		}
-	}()
+	go m.watchAndNotify(agentName, *noSound, *soundFile, *noBanner)
+	go m.copyPTYToStdout(ptmx)
+	go m.copyStdinToPTY(ptmx)
 
 	cmd.Wait()
 }
