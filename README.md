@@ -1,6 +1,9 @@
 # crai (Catcher in the rAI)
 *(pronounced: cry)*
 
+| English | [日本語](README-ja.md) |
+|:---:|:---:|
+
 > *"I thought what I'd do was, I'd pretend I was one of those deaf-mutes... until the AI finishes its thought."*
 
 ---
