@@ -34,6 +34,7 @@ const (
 func main() {
 	noBanner := flag.Bool("no-banner", false, "suppress Notification Center banner")
 	noSound := flag.Bool("no-sound", false, "suppress sound")
+	soundFile := flag.String("sound", "/System/Library/Sounds/Glass.aiff", "path to sound file played on completion")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: crai [options] <command> [args...]\n")
 		fmt.Fprintf(os.Stderr, "Example: crai claude --dangerously-skip-permissions\n\n")
@@ -97,7 +98,7 @@ func main() {
 				state = stateNotified
 				notificationPending = false
 				if !*noSound {
-					exec.Command("afplay", "/System/Library/Sounds/Glass.aiff").Start()
+					exec.Command("afplay", *soundFile).Start()
 				}
 				if !*noBanner {
 					exec.Command("osascript", "-e", `display notification "AI finished" with title "crai"`).Start()
