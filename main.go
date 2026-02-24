@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -30,6 +31,47 @@ const (
 	// don't need an audible alert because the developer is likely still watching).
 	minWorkingDuration = 5 * time.Second
 )
+
+// stripANSI removes ANSI/VT escape sequences from b, returning plain text.
+func stripANSI(b []byte) string {
+	out := make([]byte, 0, len(b))
+	i := 0
+	for i < len(b) {
+		if b[i] != 0x1B {
+			out = append(out, b[i])
+			i++
+			continue
+		}
+		i++ // skip ESC
+		if i >= len(b) {
+			break
+		}
+		switch b[i] {
+		case '[': // CSI — skip until final byte (0x40–0x7E)
+			i++
+			for i < len(b) && !(b[i] >= 0x40 && b[i] <= 0x7E) {
+				i++
+			}
+			i++
+		case ']': // OSC — skip until BEL or ST
+			i++
+			for i < len(b) {
+				if b[i] == 0x07 {
+					i++
+					break
+				}
+				if b[i] == 0x1B && i+1 < len(b) && b[i+1] == '\\' {
+					i += 2
+					break
+				}
+				i++
+			}
+		default: // other two-byte ESC sequences
+			i++
+		}
+	}
+	return string(out)
+}
 
 func main() {
 	noBanner := flag.Bool("no-banner", false, "suppress Notification Center banner")
@@ -84,6 +126,7 @@ func main() {
 	var workingStarted time.Time // when the current AI working session began
 	submitted := false           // true once the user has pressed Enter at least once
 	notificationPending := false // true from Enter until the resulting notification fires
+	var lastAILine string        // last non-empty text line from AI output
 
 	// Watcher goroutine: fires notification after silenceThreshold of inactivity
 	go func() {
@@ -97,11 +140,23 @@ func main() {
 				time.Since(workingStarted) >= minWorkingDuration {
 				state = stateNotified
 				notificationPending = false
+
+				msg := "AI finished"
+				if lastAILine != "" {
+					line := lastAILine
+					runes := []rune(line)
+					if len(runes) > 50 {
+						line = string(runes[:50]) + "..."
+					}
+					line = strings.ReplaceAll(line, `"`, `'`)
+					msg = "AI finished: " + line
+				}
+
 				if !*noSound {
 					exec.Command("afplay", *soundFile).Start()
 				}
 				if !*noBanner {
-					exec.Command("osascript", "-e", `display notification "AI finished" with title "crai"`).Start()
+					exec.Command("osascript", "-e", `display notification "`+msg+`" with title "crai"`).Start()
 				}
 				os.Stdout.Write([]byte("\a"))
 			}
@@ -124,8 +179,20 @@ func main() {
 					lastOutput = time.Now()
 					if state != stateWorking {
 						workingStarted = time.Now()
+						lastAILine = "" // reset for new working session
 					}
 					state = stateWorking
+
+					// Track the last non-empty text line for the notification banner.
+					// \r within a segment overwrites earlier content on the same line.
+					text := stripANSI(buf[:n])
+					for _, segment := range strings.Split(text, "\n") {
+						parts := strings.Split(segment, "\r")
+						line := strings.TrimSpace(parts[len(parts)-1])
+						if line != "" {
+							lastAILine = line
+						}
+					}
 				}
 				mu.Unlock()
 			}
