@@ -68,6 +68,13 @@ go build -o crai .
 sudo mv crai /usr/local/bin/
 ```
 
+## Uninstall
+
+```sh
+brew uninstall crai
+brew untap turtlekazu/tap
+```
+
 ---
 
 ## Usage
