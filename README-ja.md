@@ -132,8 +132,20 @@ crai --sound /System/Library/Sounds/Ping.aiff claude
 
 ## 動作環境
 
-- macOS（音声に `afplay`、通知センターに `osascript` を使用）
+- macOS（音声に `afplay`、通知センターに `terminal-notifier` を使用）
 - 任意のコマンドライン AI ツール（Claude Code, Codex, Gemini CLI など）
+
+### 通知の設定（推奨）
+
+安定した通知のために、[`terminal-notifier`](https://github.com/julienXX/terminal-notifier) のインストールを推奨します。システム設定への正式な登録と、おやすみモードの制御が正しく機能します：
+
+```sh
+brew install terminal-notifier
+```
+
+`terminal-notifier` がインストールされていない場合は `osascript` にフォールバックします。ただし `osascript` による通知はシステム設定の通知一覧で「スクリプトエディタ」として登録されるため、設定項目が見つけにくいという問題があります。
+
+`terminal-notifier` をインストールすると、初回の通知時に**システム設定 → 通知 → terminal-notifier** として登録され、そこから動作を調整できます。
 
 ---
 

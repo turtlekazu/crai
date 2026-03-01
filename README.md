@@ -132,8 +132,20 @@ Any `.aiff` or `.mp3` file can be specified.
 
 ## Requirements
 
-- macOS (uses `afplay` for audio and `osascript` for Notification Center banners)
+- macOS (uses `afplay` for audio and `terminal-notifier` for Notification Center banners)
 - Any command-line AI tool — Claude Code, Codex, Gemini CLI, and more
+
+### Notification setup (recommended)
+
+Install [`terminal-notifier`](https://github.com/julienXX/terminal-notifier) for reliable notifications that appear in System Settings and respect Do Not Disturb correctly:
+
+```sh
+brew install terminal-notifier
+```
+
+If `terminal-notifier` is not installed, `crai` falls back to `osascript`. However, `osascript`-based notifications appear under "Script Editor" in System Settings → Notifications, which can be difficult to find and configure.
+
+After installing `terminal-notifier`, the first notification will register it in **System Settings → Notifications → terminal-notifier**, where you can adjust its behavior.
 
 ---
 
