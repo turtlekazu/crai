@@ -1,0 +1,64 @@
+現在の実装だと、通知バナーがOSの設定によって出てこないことがあります。しかも通知設定を変えても変更するための項目が見つからず。これを、どんなMacOSの状態でも通知が出るようにしたいですが、どうするのがベストでしょうか？
+
+---
+
+現在の実装だと、通知バナーがOSの設定によって出てこないことがあります。しかも通知設定を変えても変更するための項目が見つからず。これを、どんなMacOSの状態でも通知が出るようにしたいですが、どうするのがベストでしょうか？
+
+---
+
+では、terminal-notifierの方向性で変更してください！
+
+---
+
+osascriptによる通知は、どうして設定アプリの通知項目から見れないのでしょうか？
+
+---
+
+Script Editor.appの通知設定を変更するにはどうしますか？
+
+---
+
+<bash-input>brew install terminal-notifier</bash-input>
+
+---
+
+<bash-stdout>==> Auto-updating Homebrew...
+Adjust how often this is run with `$HOMEBREW_AUTO_UPDATE_SECS` or disable with
+`$HOMEBREW_NO_AUTO_UPDATE=1`. Hide these hints with `$HOMEBREW_NO_ENV_HINTS=1` (see `man brew`).
+==> Auto-updated Homebrew!
+Updated 3 taps (entireio/tap, homebrew/core and homebrew/cask).
+==> New Formulae
+betterleaks: Secrets scanner built for configurability and speed
+cni-plugins: Container Network Interface plugins
+cwalk: Cross-platform path library for C/C++
+lld@21: LLVM Project Linker
+llvm@21: Next-gen compiler infrastructure
+mp4ff: Tools for parsing and manipulating MP4/ISOBMFF files
+protobuf@33: Protocol buffers (Google's data interchange format)
+rootlesskit: Linux-native "fake root" for implementing rootless containers
+runc: CLI tool for spawning and running containers according to the OCI specification
+==> New Casks
+cmux: Ghostty-based terminal with vertical tabs and notifications for AI coding agents
+connectiq-sdk-manager: Manage SDKs and download device definitions for Garmin Connect IQ development
+font-datatype
+font-gmarket-sans
+font-iosevka-charon
+font-iosevka-charon-mono
+itsytv: Menu bar app for controlling your Apple TV
+kotlin-lsp: Official Kotlin Language Server
+macusb: Tool to create bootable USB installers
+
+You have 100 outdated formulae and 5 outdated casks installed.
+
+==> Fetching downloads for: terminal-notifier
+✔︎ Bottle Manifest terminal-notifier (2.0.0)
+✔︎ Bottle terminal-notifier (2.0.0)
+==> Pouring terminal-notifier--2.0.0.arm64_tahoe.bottle.tar.gz
+🍺  /opt/homebrew/Cellar/terminal-notifier/2.0.0: 13 files, 488.6KB
+==> Running `brew cleanup terminal-notifier`...
+Disable this behaviour by setting `HOMEBREW_NO_INSTALL_CLEANUP=1`.
+Hide these hints with `HOMEBREW_NO_ENV_HINTS=1` (see `man brew`).</bash-stdout><bash-stderr></bash-stderr>
+
+---
+
+READMEなどにも、追記していただけますか？
