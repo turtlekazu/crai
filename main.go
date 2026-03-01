@@ -80,7 +80,15 @@ func notify(agentName string, noSound bool, soundFile string, noBanner bool) {
 		exec.Command("afplay", soundFile).Start()
 	}
 	if !noBanner {
-		exec.Command("osascript", "-e", `display notification "`+msg+`" with title "crai"`).Start()
+		if _, err := exec.LookPath("terminal-notifier"); err == nil {
+			exec.Command("terminal-notifier",
+				"-title", "crai",
+				"-message", msg,
+				"-ignoreDnD",
+			).Start()
+		} else {
+			exec.Command("osascript", "-e", `display notification "`+msg+`" with title "crai"`).Start()
+		}
 	}
 	os.Stdout.Write([]byte("\a"))
 }
