@@ -5,7 +5,7 @@
 
 ---
 
-```
+```text
   ██████╗ ██████╗  █████╗ ██╗
  ██╔════╝ ██╔══██╗██╔══██╗██║
  ██║      ██████╔╝███████║██║
@@ -25,7 +25,7 @@ Like a catcher in the semiconductor fields — though standing at the cliff's ed
 
 ## How It Works
 
-```
+```text
  ┌──────────┐   raw stdin   ┌─────────────┐   PTY   ┌───────────┐
  │  You     │ ────────────► │    crai     │ ──────► │  claude   │
  │  (human) │ ◄──────────── │  (watcher)  │ ◄────── │  (AI CLI) │
