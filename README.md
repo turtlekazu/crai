@@ -6,13 +6,12 @@
 ---
 
 ```text
-  ██████╗ ██████╗  █████╗ ██╗
- ██╔════╝ ██╔══██╗██╔══██╗██║
- ██║      ██████╔╝███████║██║
- ██║      ██╔══██╗██╔══██║██║
- ╚██████╗ ██║  ██║██║  ██║██║
-  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝
-  catcher in the rAI
+   ______  ____    ___     ____
+  / ____/ / __ \  /   |   /  _/
+ / /     / /_/ / / /| |   / /
+/ /___  / _, _/ / ___ | _/ /
+\____/ /_/ |_| /_/  |_|/___/
+ catcher in the rAI
 ```
 
 A CLI tool that detects when your AI agent finishes a long response and notifies you — with sound and a Notification Center banner. Designed to work alongside command-line AI tools such as Claude Code, Codex, and Gemini CLI.
@@ -26,17 +25,17 @@ Like a catcher in the semiconductor fields — though standing at the cliff's ed
 ## How It Works
 
 ```text
- ┌──────────┐   raw stdin   ┌─────────────┐   PTY   ┌───────────┐
- │  You     │ ────────────► │    crai     │ ──────► │  claude   │
- │  (human) │ ◄──────────── │  (watcher)  │ ◄────── │  (AI CLI) │
- └──────────┘   raw stdout  └──────┬──────┘         └───────────┘
-                                   │
-                   silence ≥ 1500ms after AI output
-                                   │
-                                   ▼
-                    🔔 Play Sound
-                    🪟 Notification Center Banner
-                    🔕 Terminal Bell (\a)
+ +----------+   raw stdin   +-------------+   PTY   +-----------+
+ |  You     | ------------> |    crai     | ------> |  claude   |
+ |  (human) | <------------ |  (watcher)  | <------ |  (AI CLI) |
+ +----------+   raw stdout  +------+------+         +-----------+
+                                   |
+                   silence >= 1500ms after AI output
+                                   |
+                                   v
+                    * Play Sound
+                    * Notification Center Banner
+                    * Terminal Bell (\a)
 ```
 
 1. Spawns your command inside a **pseudo-terminal (PTY)**
