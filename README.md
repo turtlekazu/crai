@@ -24,6 +24,31 @@ Like a catcher in the semiconductor fields — though standing at the cliff's ed
 
 ## Hook Mode
 
+```text
+ +----------+                         +---------------------------+
+ |  You     | -- one-time setup ----> | crai install <agent>      |
+ |  (human) |                         | writes hook / notify      |
+ +----------+                         +-------------+-------------+
+                                                   |
+                                                   v
+                                  +----------------+----------------+
+                                  | AI CLI config                   |
+                                  | claude: ~/.claude/settings.json |
+                                  | codex:  ~/.codex/config.toml    |
+                                  | gemini: ~/.gemini/settings.json |
+                                  +----------------+----------------+
+                                                   |
+                                                   v
+ +----------+   normal usage   +-----------+   hook/notify   +-----------------------------+
+ |  You     | ---------------> | AI CLI    | -------------> | crai notify --source <agent> |
+ |  (human) |                  |           |                +---------------+---------------+
+ +----------+                  +-----------+                                |
+                                                                            v
+                                                              * Play Sound
+                                                              * Notification Center Banner
+                                                              * Terminal Bell (\a)
+```
+
 Install the notification command once for each supported CLI:
 
 ```sh
@@ -59,6 +84,8 @@ If `~/.codex/config.toml` already has a non-`crai` `notify` command, `crai insta
 Running `crai install <agent>` again is safe. If a `crai`-managed hook has drifted, install repairs it in place.
 
 ## Legacy PTY Mode
+
+The original wrapper mode is still available, but it is now the fallback path rather than the primary one.
 
 ```text
  +----------+   raw stdin   +-------------+   PTY   +-----------+
