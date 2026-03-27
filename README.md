@@ -14,7 +14,7 @@
  catcher in the rAI
 ```
 
-A CLI tool that detects when your AI agent finishes a long response and notifies you — with sound and a Notification Center banner. Designed to work alongside command-line AI tools such as Claude Code, Codex, and Gemini CLI.
+A CLI tool that notifies you when your AI CLI needs attention. `crai` can now install native notification hooks for supported tools, starting with Codex, while keeping the original PTY wrapper for legacy use.
 
 Like a catcher in the semiconductor fields — though standing at the cliff's edge, catching both the AI agents running wild and your own consciousness before it falls into the depths of another context.
 
@@ -22,7 +22,30 @@ Like a catcher in the semiconductor fields — though standing at the cliff's ed
 
 ---
 
-## How It Works
+## Codex Hook Mode
+
+Install the Codex notification command once:
+
+```sh
+crai install codex
+```
+
+That writes a `notify` command into `~/.codex/config.toml`. After that, just use `codex` as normal. When Codex emits a notification event, it calls:
+
+```sh
+crai notify --source codex
+```
+
+Useful commands:
+
+```sh
+crai status codex
+crai uninstall codex
+```
+
+If `~/.codex/config.toml` already has a non-`crai` `notify` command, `crai install codex` refuses to overwrite it.
+
+## Legacy PTY Mode
 
 ```text
  +----------+   raw stdin   +-------------+   PTY   +-----------+
@@ -77,6 +100,15 @@ brew untap turtlekazu/tap
 ---
 
 ## Usage
+
+### Codex
+
+```sh
+crai install codex
+codex
+```
+
+### Legacy wrapper
 
 ```sh
 # Wrap claude directly
