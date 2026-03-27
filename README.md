@@ -14,7 +14,7 @@
  catcher in the rAI
 ```
 
-A CLI tool that notifies you when your AI CLI needs attention. `crai` can now install native notification hooks for supported tools, starting with Codex, while keeping the original PTY wrapper for legacy use.
+A CLI tool that notifies you when your AI CLI needs attention. `crai` can now install native notification hooks for supported tools, currently Codex and Claude Code, while keeping the original PTY wrapper for legacy use.
 
 Like a catcher in the semiconductor fields — though standing at the cliff's edge, catching both the AI agents running wild and your own consciousness before it falls into the depths of another context.
 
@@ -22,24 +22,32 @@ Like a catcher in the semiconductor fields — though standing at the cliff's ed
 
 ---
 
-## Codex Hook Mode
+## Hook Mode
 
-Install the Codex notification command once:
+Install the notification command once for each supported CLI:
 
 ```sh
+crai install claude
 crai install codex
 ```
 
-That writes a `notify` command into `~/.codex/config.toml`. After that, just use `codex` as normal. When Codex emits a notification event, it calls:
+After that, just use `claude` or `codex` as normal.
+
+- `crai install claude` adds a `Stop` command hook to `~/.claude/settings.json`
+- `crai install codex` writes a `notify` command into `~/.codex/config.toml`
+
+Both integrations eventually call:
 
 ```sh
-crai notify --source codex
+crai notify --source <agent>
 ```
 
 Useful commands:
 
 ```sh
+crai status claude
 crai status codex
+crai uninstall claude
 crai uninstall codex
 ```
 
@@ -106,6 +114,13 @@ brew untap turtlekazu/tap
 ```sh
 crai install codex
 codex
+```
+
+### Claude Code
+
+```sh
+crai install claude
+claude
 ```
 
 ### Legacy wrapper

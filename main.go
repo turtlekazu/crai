@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -63,6 +64,18 @@ type codexNotifyState struct {
 	ExecutableStable bool
 }
 
+type claudeHookState struct {
+	ConfigPath       string
+	ConfigExists     bool
+	Installed        bool
+	Drifted          bool
+	ManagedCount     int
+	ExpectedCommand  string
+	CurrentCommands  []string
+	ExecutablePath   string
+	ExecutableStable bool
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		printTopLevelUsage(os.Stderr)
@@ -87,9 +100,13 @@ func main() {
 
 func printTopLevelUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
+	fmt.Fprintln(w, "  crai install claude")
 	fmt.Fprintln(w, "  crai install codex")
+	fmt.Fprintln(w, "  crai status claude")
 	fmt.Fprintln(w, "  crai status codex")
+	fmt.Fprintln(w, "  crai uninstall claude")
 	fmt.Fprintln(w, "  crai uninstall codex")
+	fmt.Fprintln(w, "  crai notify --source claude")
 	fmt.Fprintln(w, "  crai notify --source codex")
 	fmt.Fprintln(w, "  crai [legacy-options] <command> [args...]")
 }
@@ -98,116 +115,189 @@ func runInstall(args []string) error {
 	if len(args) == 0 {
 		return errors.New("install requires a target")
 	}
-	if args[0] != "codex" {
-		return fmt.Errorf("unsupported install target: %s", args[0])
-	}
 	if len(args) > 1 {
 		return fmt.Errorf("unexpected arguments: %s", strings.Join(args[1:], " "))
 	}
 
-	state, err := inspectCodexNotify()
-	if err != nil {
-		return err
-	}
-	if !state.ExecutableStable {
-		return fmt.Errorf("refusing to install from unstable executable path: %s\nbuild or install crai first, then rerun", state.ExecutablePath)
-	}
-	if len(state.CurrentCommand) > 0 && !state.Managed {
-		return fmt.Errorf("%w: %s", errCodexNotifyConflict, state.CurrentRaw)
-	}
-	if state.Installed {
-		fmt.Printf("codex notify already installed in %s\n", state.ConfigPath)
+	switch args[0] {
+	case "codex":
+		state, err := inspectCodexNotify()
+		if err != nil {
+			return err
+		}
+		if !state.ExecutableStable {
+			return fmt.Errorf("refusing to install from unstable executable path: %s\nbuild or install crai first, then rerun", state.ExecutablePath)
+		}
+		if len(state.CurrentCommand) > 0 && !state.Managed {
+			return fmt.Errorf("%w: %s", errCodexNotifyConflict, state.CurrentRaw)
+		}
+		if state.Installed {
+			fmt.Printf("codex notify already installed in %s\n", state.ConfigPath)
+			return nil
+		}
+
+		updated, err := upsertCodexNotify(state.ConfigPath, state.ExpectedCommand)
+		if err != nil {
+			return err
+		}
+
+		if state.Drifted {
+			fmt.Printf("updated codex notify in %s\n", updated)
+			return nil
+		}
+
+		fmt.Printf("installed codex notify in %s\n", updated)
 		return nil
-	}
-
-	updated, err := upsertCodexNotify(state.ConfigPath, state.ExpectedCommand)
-	if err != nil {
-		return err
-	}
-
-	if state.Drifted {
-		fmt.Printf("updated codex notify in %s\n", updated)
+	case "claude":
+		state, err := inspectClaudeStopHook()
+		if err != nil {
+			return err
+		}
+		if !state.ExecutableStable {
+			return fmt.Errorf("refusing to install from unstable executable path: %s\nbuild or install crai first, then rerun", state.ExecutablePath)
+		}
+		if state.Installed {
+			fmt.Printf("claude hook already installed in %s\n", state.ConfigPath)
+			return nil
+		}
+		updated, err := upsertClaudeStopHook(state.ConfigPath, state.ExpectedCommand)
+		if err != nil {
+			return err
+		}
+		if state.Drifted {
+			fmt.Printf("updated claude hook in %s\n", updated)
+			return nil
+		}
+		fmt.Printf("installed claude hook in %s\n", updated)
 		return nil
+	default:
+		return fmt.Errorf("unsupported install target: %s", args[0])
 	}
-
-	fmt.Printf("installed codex notify in %s\n", updated)
-	return nil
 }
 
 func runStatus(args []string) error {
 	if len(args) == 0 {
 		return errors.New("status requires a target")
 	}
-	if args[0] != "codex" {
-		return fmt.Errorf("unsupported status target: %s", args[0])
-	}
 	if len(args) > 1 {
 		return fmt.Errorf("unexpected arguments: %s", strings.Join(args[1:], " "))
 	}
 
-	state, err := inspectCodexNotify()
-	if err != nil {
-		return err
-	}
+	switch args[0] {
+	case "codex":
+		state, err := inspectCodexNotify()
+		if err != nil {
+			return err
+		}
 
-	fmt.Printf("target: codex\n")
-	fmt.Printf("config: %s\n", state.ConfigPath)
-	if !state.ConfigExists {
-		fmt.Printf("status: not installed\n")
+		fmt.Printf("target: codex\n")
+		fmt.Printf("config: %s\n", state.ConfigPath)
+		if !state.ConfigExists {
+			fmt.Printf("status: not installed\n")
+			return nil
+		}
+		switch {
+		case state.Installed:
+			fmt.Printf("status: installed\n")
+		case state.Drifted:
+			fmt.Printf("status: drifted\n")
+		case len(state.CurrentCommand) == 0:
+			fmt.Printf("status: not installed\n")
+		default:
+			fmt.Printf("status: conflict\n")
+		}
+		if len(state.CurrentCommand) > 0 {
+			fmt.Printf("notify: %s\n", formatCommand(state.CurrentCommand))
+		}
+		if state.Drifted {
+			fmt.Printf("expected: %s\n", formatCommand(state.ExpectedCommand))
+		}
 		return nil
-	}
-	switch {
-	case state.Installed:
-		fmt.Printf("status: installed\n")
-	case state.Drifted:
-		fmt.Printf("status: drifted\n")
-	case len(state.CurrentCommand) == 0:
-		fmt.Printf("status: not installed\n")
+	case "claude":
+		state, err := inspectClaudeStopHook()
+		if err != nil {
+			return err
+		}
+		fmt.Printf("target: claude\n")
+		fmt.Printf("config: %s\n", state.ConfigPath)
+		if !state.ConfigExists {
+			fmt.Printf("status: not installed\n")
+			return nil
+		}
+		switch {
+		case state.Installed:
+			fmt.Printf("status: installed\n")
+		case state.Drifted:
+			fmt.Printf("status: drifted\n")
+		default:
+			fmt.Printf("status: not installed\n")
+		}
+		for _, command := range state.CurrentCommands {
+			fmt.Printf("hook: %s\n", strconv.Quote(command))
+		}
+		if state.Drifted {
+			fmt.Printf("expected: %s\n", strconv.Quote(state.ExpectedCommand))
+		}
+		return nil
 	default:
-		fmt.Printf("status: conflict\n")
+		return fmt.Errorf("unsupported status target: %s", args[0])
 	}
-	if len(state.CurrentCommand) > 0 {
-		fmt.Printf("notify: %s\n", formatCommand(state.CurrentCommand))
-	}
-	if state.Drifted {
-		fmt.Printf("expected: %s\n", formatCommand(state.ExpectedCommand))
-	}
-	return nil
 }
 
 func runUninstall(args []string) error {
 	if len(args) == 0 {
 		return errors.New("uninstall requires a target")
 	}
-	if args[0] != "codex" {
-		return fmt.Errorf("unsupported uninstall target: %s", args[0])
-	}
 	if len(args) > 1 {
 		return fmt.Errorf("unexpected arguments: %s", strings.Join(args[1:], " "))
 	}
 
-	state, err := inspectCodexNotify()
-	if err != nil {
-		return err
-	}
-	if len(state.CurrentCommand) == 0 {
-		fmt.Printf("codex notify is not installed\n")
-		return nil
-	}
-	if !state.Managed {
-		return fmt.Errorf("%w: %s", errCodexNotifyConflict, state.CurrentRaw)
-	}
+	switch args[0] {
+	case "codex":
+		state, err := inspectCodexNotify()
+		if err != nil {
+			return err
+		}
+		if len(state.CurrentCommand) == 0 {
+			fmt.Printf("codex notify is not installed\n")
+			return nil
+		}
+		if !state.Managed {
+			return fmt.Errorf("%w: %s", errCodexNotifyConflict, state.CurrentRaw)
+		}
 
-	updated, removed, err := removeCodexNotify(state.ConfigPath)
-	if err != nil {
-		return err
-	}
-	if !removed {
-		fmt.Printf("codex notify is not installed\n")
+		updated, removed, err := removeCodexNotify(state.ConfigPath)
+		if err != nil {
+			return err
+		}
+		if !removed {
+			fmt.Printf("codex notify is not installed\n")
+			return nil
+		}
+		fmt.Printf("removed codex notify from %s\n", updated)
 		return nil
+	case "claude":
+		state, err := inspectClaudeStopHook()
+		if err != nil {
+			return err
+		}
+		if state.ManagedCount == 0 {
+			fmt.Printf("claude hook is not installed\n")
+			return nil
+		}
+		updated, removed, err := removeClaudeStopHook(state.ConfigPath)
+		if err != nil {
+			return err
+		}
+		if !removed {
+			fmt.Printf("claude hook is not installed\n")
+			return nil
+		}
+		fmt.Printf("removed claude hook from %s\n", updated)
+		return nil
+	default:
+		return fmt.Errorf("unsupported uninstall target: %s", args[0])
 	}
-	fmt.Printf("removed codex notify from %s\n", updated)
-	return nil
 }
 
 func runNotify(args []string) error {
@@ -358,6 +448,14 @@ func codexConfigPath() (string, error) {
 	return filepath.Join(home, ".codex", "config.toml"), nil
 }
 
+func claudeConfigPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".claude", "settings.json"), nil
+}
+
 func executableInstallPath() (string, bool, error) {
 	exePath, err := os.Executable()
 	if err != nil {
@@ -371,6 +469,177 @@ func executableInstallPath() (string, bool, error) {
 	tempDir := filepath.Clean(os.TempDir()) + string(os.PathSeparator)
 	stable := !strings.HasPrefix(exePath, tempDir) && !strings.Contains(exePath, string(os.PathSeparator)+"go-build")
 	return exePath, stable, nil
+}
+
+func inspectClaudeStopHook() (claudeHookState, error) {
+	configPath, err := claudeConfigPath()
+	if err != nil {
+		return claudeHookState{}, err
+	}
+	exePath, stable, err := executableInstallPath()
+	if err != nil {
+		return claudeHookState{}, err
+	}
+
+	state := claudeHookState{
+		ConfigPath:       configPath,
+		ExecutablePath:   exePath,
+		ExpectedCommand:  shellQuote(exePath) + " notify --source claude",
+		ExecutableStable: stable,
+	}
+
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return state, nil
+		}
+		return claudeHookState{}, err
+	}
+	state.ConfigExists = true
+
+	var root map[string]any
+	if len(bytes.TrimSpace(content)) == 0 {
+		return state, nil
+	}
+	if err := json.Unmarshal(content, &root); err != nil {
+		return claudeHookState{}, err
+	}
+
+	commands := collectClaudeManagedCommands(root)
+	state.CurrentCommands = commands
+	state.ManagedCount = len(commands)
+	if len(commands) == 1 && commands[0] == state.ExpectedCommand {
+		state.Installed = true
+		return state, nil
+	}
+	if len(commands) > 0 {
+		state.Drifted = true
+	}
+
+	return state, nil
+}
+
+func upsertClaudeStopHook(path string, expectedCommand string) (string, error) {
+	root, err := loadJSONConfig(path)
+	if err != nil {
+		return "", err
+	}
+
+	hooks := getOrCreateMap(root, "hooks")
+	stopEntries := getOrCreateArray(hooks, "Stop")
+
+	var cleaned []any
+	for _, entry := range stopEntries {
+		group, ok := entry.(map[string]any)
+		if !ok {
+			cleaned = append(cleaned, entry)
+			continue
+		}
+		hookList, ok := group["hooks"].([]any)
+		if !ok {
+			cleaned = append(cleaned, entry)
+			continue
+		}
+
+		var nextHooks []any
+		for _, hook := range hookList {
+			hookMap, ok := hook.(map[string]any)
+			if !ok {
+				nextHooks = append(nextHooks, hook)
+				continue
+			}
+			if isClaudeManagedHookMap(hookMap) {
+				continue
+			}
+			nextHooks = append(nextHooks, hook)
+		}
+		group["hooks"] = nextHooks
+		cleaned = append(cleaned, group)
+	}
+
+	cleaned = append(cleaned, map[string]any{
+		"hooks": []any{
+			map[string]any{
+				"type":    "command",
+				"command": expectedCommand,
+			},
+		},
+	})
+
+	hooks["Stop"] = cleaned
+	if err := writeJSONConfig(path, root, 0o600); err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+func removeClaudeStopHook(path string) (string, bool, error) {
+	root, err := loadJSONConfig(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return path, false, nil
+		}
+		return "", false, err
+	}
+
+	hooks, ok := root["hooks"].(map[string]any)
+	if !ok {
+		return path, false, nil
+	}
+	stopEntries, ok := hooks["Stop"].([]any)
+	if !ok {
+		return path, false, nil
+	}
+
+	var (
+		removed bool
+		cleaned []any
+	)
+	for _, entry := range stopEntries {
+		group, ok := entry.(map[string]any)
+		if !ok {
+			cleaned = append(cleaned, entry)
+			continue
+		}
+		hookList, ok := group["hooks"].([]any)
+		if !ok {
+			cleaned = append(cleaned, entry)
+			continue
+		}
+
+		var nextHooks []any
+		for _, hook := range hookList {
+			hookMap, ok := hook.(map[string]any)
+			if ok && isClaudeManagedHookMap(hookMap) {
+				removed = true
+				continue
+			}
+			nextHooks = append(nextHooks, hook)
+		}
+		if len(nextHooks) == 0 {
+			continue
+		}
+		group["hooks"] = nextHooks
+		cleaned = append(cleaned, group)
+	}
+
+	if !removed {
+		return path, false, nil
+	}
+
+	if len(cleaned) == 0 {
+		delete(hooks, "Stop")
+	} else {
+		hooks["Stop"] = cleaned
+	}
+	if len(hooks) == 0 {
+		delete(root, "hooks")
+	}
+
+	if err := writeJSONConfig(path, root, 0o600); err != nil {
+		return "", false, err
+	}
+	return path, true, nil
 }
 
 func upsertCodexNotify(path string, command []string) (string, error) {
@@ -388,6 +657,37 @@ func upsertCodexNotify(path string, command []string) (string, error) {
 		return "", err
 	}
 	return path, nil
+}
+
+func loadJSONConfig(path string) (map[string]any, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return map[string]any{}, nil
+		}
+		return nil, err
+	}
+	if len(bytes.TrimSpace(content)) == 0 {
+		return map[string]any{}, nil
+	}
+
+	var root map[string]any
+	if err := json.Unmarshal(content, &root); err != nil {
+		return nil, err
+	}
+	if root == nil {
+		root = map[string]any{}
+	}
+	return root, nil
+}
+
+func writeJSONConfig(path string, root map[string]any, defaultMode os.FileMode) error {
+	data, err := json.MarshalIndent(root, "", "  ")
+	if err != nil {
+		return err
+	}
+	data = append(data, '\n')
+	return writeConfigAtomically(path, data, defaultMode)
 }
 
 func removeCodexNotify(path string) (string, bool, error) {
@@ -671,6 +971,13 @@ func formatCommand(values []string) string {
 	return strings.Join(quoted, " ")
 }
 
+func shellQuote(value string) string {
+	if value == "" {
+		return "''"
+	}
+	return "'" + strings.ReplaceAll(value, "'", `'"'"'`) + "'"
+}
+
 func equalStrings(a, b []string) bool {
 	if len(a) != len(b) {
 		return false
@@ -681,6 +988,67 @@ func equalStrings(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+func getOrCreateMap(root map[string]any, key string) map[string]any {
+	if existing, ok := root[key].(map[string]any); ok {
+		return existing
+	}
+	created := map[string]any{}
+	root[key] = created
+	return created
+}
+
+func getOrCreateArray(root map[string]any, key string) []any {
+	if existing, ok := root[key].([]any); ok {
+		return existing
+	}
+	created := []any{}
+	root[key] = created
+	return created
+}
+
+func collectClaudeManagedCommands(root map[string]any) []string {
+	hooks, ok := root["hooks"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	stopEntries, ok := hooks["Stop"].([]any)
+	if !ok {
+		return nil
+	}
+
+	var commands []string
+	for _, entry := range stopEntries {
+		group, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		hookList, ok := group["hooks"].([]any)
+		if !ok {
+			continue
+		}
+		for _, hook := range hookList {
+			hookMap, ok := hook.(map[string]any)
+			if !ok || !isClaudeManagedHookMap(hookMap) {
+				continue
+			}
+			command, _ := hookMap["command"].(string)
+			commands = append(commands, command)
+		}
+	}
+	return commands
+}
+
+func isClaudeManagedHookMap(hook map[string]any) bool {
+	hookType, _ := hook["type"].(string)
+	command, _ := hook["command"].(string)
+	return hookType == "command" && isClaudeManagedCommand(command)
+}
+
+func isClaudeManagedCommand(command string) bool {
+	return strings.Contains(command, " notify --source claude") &&
+		strings.Contains(command, "crai")
 }
 
 func isManagedCodexCommand(cmd []string) bool {
