@@ -56,6 +56,7 @@ crai uninstall gemini
 ```
 
 If `~/.codex/config.toml` already has a non-`crai` `notify` command, `crai install codex` refuses to overwrite it.
+Running `crai install <agent>` again is safe. If a `crai`-managed hook has drifted, install repairs it in place.
 
 ## Legacy PTY Mode
 

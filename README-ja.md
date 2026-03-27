@@ -56,6 +56,7 @@ crai uninstall gemini
 ```
 
 すでに `~/.codex/config.toml` に `crai` 以外の `notify` が入っている場合、`crai install codex` は上書きせずに停止します。
+`crai install <agent>` は何度実行しても安全で、`crai` 管理の hook が drift していればその場で修復します。
 
 ## 従来の PTY モード
 

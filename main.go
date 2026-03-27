@@ -145,10 +145,11 @@ func runInstall(args []string) error {
 			return fmt.Errorf("refusing to install from unstable executable path: %s\nbuild or install crai first, then rerun", state.ExecutablePath)
 		}
 		if len(state.CurrentCommand) > 0 && !state.Managed {
-			return fmt.Errorf("%w: %s", errCodexNotifyConflict, state.CurrentRaw)
+			return fmt.Errorf("%w: %s\nrun `crai status codex` to inspect it, then remove or replace that notify command manually", errCodexNotifyConflict, state.CurrentRaw)
 		}
 		if state.Installed {
-			fmt.Printf("codex notify already installed in %s\n", state.ConfigPath)
+			fmt.Printf("codex notify is already installed\n")
+			fmt.Printf("config: %s\n", state.ConfigPath)
 			return nil
 		}
 
@@ -158,7 +159,7 @@ func runInstall(args []string) error {
 		}
 
 		if state.Drifted {
-			fmt.Printf("updated codex notify in %s\n", updated)
+			fmt.Printf("repaired codex notify in %s\n", updated)
 			return nil
 		}
 
@@ -173,7 +174,8 @@ func runInstall(args []string) error {
 			return fmt.Errorf("refusing to install from unstable executable path: %s\nbuild or install crai first, then rerun", state.ExecutablePath)
 		}
 		if state.Installed {
-			fmt.Printf("claude hook already installed in %s\n", state.ConfigPath)
+			fmt.Printf("claude stop hook is already installed\n")
+			fmt.Printf("config: %s\n", state.ConfigPath)
 			return nil
 		}
 		updated, err := upsertClaudeStopHook(state.ConfigPath, state.ExpectedCommand)
@@ -181,7 +183,7 @@ func runInstall(args []string) error {
 			return err
 		}
 		if state.Drifted {
-			fmt.Printf("updated claude hook in %s\n", updated)
+			fmt.Printf("repaired claude stop hook in %s\n", updated)
 			return nil
 		}
 		fmt.Printf("installed claude hook in %s\n", updated)
@@ -195,7 +197,8 @@ func runInstall(args []string) error {
 			return fmt.Errorf("refusing to install from unstable executable path: %s\nbuild or install crai first, then rerun", state.ExecutablePath)
 		}
 		if state.Installed {
-			fmt.Printf("gemini hook already installed in %s\n", state.ConfigPath)
+			fmt.Printf("gemini AfterAgent hook is already installed\n")
+			fmt.Printf("config: %s\n", state.ConfigPath)
 			return nil
 		}
 		updated, err := upsertGeminiAfterAgentHook(state.ConfigPath, state.ExpectedCommand)
@@ -203,7 +206,7 @@ func runInstall(args []string) error {
 			return err
 		}
 		if state.Drifted {
-			fmt.Printf("updated gemini hook in %s\n", updated)
+			fmt.Printf("repaired gemini AfterAgent hook in %s\n", updated)
 			return nil
 		}
 		fmt.Printf("installed gemini hook in %s\n", updated)
@@ -229,9 +232,11 @@ func runStatus(args []string) error {
 		}
 
 		fmt.Printf("target: codex\n")
+		fmt.Printf("integration: notify command\n")
 		fmt.Printf("config: %s\n", state.ConfigPath)
 		if !state.ConfigExists {
 			fmt.Printf("status: not installed\n")
+			fmt.Printf("next: run `crai install codex`\n")
 			return nil
 		}
 		switch {
@@ -249,6 +254,10 @@ func runStatus(args []string) error {
 		}
 		if state.Drifted {
 			fmt.Printf("expected: %s\n", formatCommand(state.ExpectedCommand))
+			fmt.Printf("next: run `crai install codex` to repair it\n")
+		}
+		if !state.Drifted && !state.Installed && len(state.CurrentCommand) > 0 {
+			fmt.Printf("next: remove the existing notify command manually, then run `crai install codex`\n")
 		}
 		return nil
 	case "claude":
@@ -257,9 +266,11 @@ func runStatus(args []string) error {
 			return err
 		}
 		fmt.Printf("target: claude\n")
+		fmt.Printf("integration: Stop hook\n")
 		fmt.Printf("config: %s\n", state.ConfigPath)
 		if !state.ConfigExists {
 			fmt.Printf("status: not installed\n")
+			fmt.Printf("next: run `crai install claude`\n")
 			return nil
 		}
 		switch {
@@ -275,6 +286,10 @@ func runStatus(args []string) error {
 		}
 		if state.Drifted {
 			fmt.Printf("expected: %s\n", strconv.Quote(state.ExpectedCommand))
+			fmt.Printf("next: run `crai install claude` to repair it\n")
+		}
+		if !state.Installed && !state.Drifted {
+			fmt.Printf("next: run `crai install claude`\n")
 		}
 		return nil
 	case "gemini":
@@ -283,9 +298,11 @@ func runStatus(args []string) error {
 			return err
 		}
 		fmt.Printf("target: gemini\n")
+		fmt.Printf("integration: AfterAgent hook\n")
 		fmt.Printf("config: %s\n", state.ConfigPath)
 		if !state.ConfigExists {
 			fmt.Printf("status: not installed\n")
+			fmt.Printf("next: run `crai install gemini`\n")
 			return nil
 		}
 		switch {
@@ -301,6 +318,10 @@ func runStatus(args []string) error {
 		}
 		if state.Drifted {
 			fmt.Printf("expected: %s\n", strconv.Quote(state.ExpectedCommand))
+			fmt.Printf("next: run `crai install gemini` to repair it\n")
+		}
+		if !state.Installed && !state.Drifted {
+			fmt.Printf("next: run `crai install gemini`\n")
 		}
 		return nil
 	default:
