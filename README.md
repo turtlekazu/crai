@@ -14,7 +14,7 @@
  catcher in the rAI
 ```
 
-A CLI tool that notifies you when your AI CLI needs attention. `crai` can now install native notification hooks for supported tools, currently Codex and Claude Code, while keeping the original PTY wrapper for legacy use.
+A CLI tool that notifies you when your AI CLI needs attention. `crai` can now install native notification hooks for supported tools, currently Codex, Claude Code, and Gemini CLI, while keeping the original PTY wrapper for legacy use.
 
 Like a catcher in the semiconductor fields — though standing at the cliff's edge, catching both the AI agents running wild and your own consciousness before it falls into the depths of another context.
 
@@ -29,12 +29,14 @@ Install the notification command once for each supported CLI:
 ```sh
 crai install claude
 crai install codex
+crai install gemini
 ```
 
 After that, just use `claude` or `codex` as normal.
 
 - `crai install claude` adds a `Stop` command hook to `~/.claude/settings.json`
 - `crai install codex` writes a `notify` command into `~/.codex/config.toml`
+- `crai install gemini` adds an `AfterAgent` command hook to `~/.gemini/settings.json`
 
 Both integrations eventually call:
 
@@ -47,8 +49,10 @@ Useful commands:
 ```sh
 crai status claude
 crai status codex
+crai status gemini
 crai uninstall claude
 crai uninstall codex
+crai uninstall gemini
 ```
 
 If `~/.codex/config.toml` already has a non-`crai` `notify` command, `crai install codex` refuses to overwrite it.
@@ -121,6 +125,13 @@ codex
 ```sh
 crai install claude
 claude
+```
+
+### Gemini CLI
+
+```sh
+crai install gemini
+gemini
 ```
 
 ### Legacy wrapper

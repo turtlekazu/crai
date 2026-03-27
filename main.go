@@ -76,6 +76,18 @@ type claudeHookState struct {
 	ExecutableStable bool
 }
 
+type geminiHookState struct {
+	ConfigPath       string
+	ConfigExists     bool
+	Installed        bool
+	Drifted          bool
+	ManagedCount     int
+	ExpectedCommand  string
+	CurrentCommands  []string
+	ExecutablePath   string
+	ExecutableStable bool
+}
+
 func main() {
 	if len(os.Args) < 2 {
 		printTopLevelUsage(os.Stderr)
@@ -102,12 +114,16 @@ func printTopLevelUsage(w io.Writer) {
 	fmt.Fprintln(w, "Usage:")
 	fmt.Fprintln(w, "  crai install claude")
 	fmt.Fprintln(w, "  crai install codex")
+	fmt.Fprintln(w, "  crai install gemini")
 	fmt.Fprintln(w, "  crai status claude")
 	fmt.Fprintln(w, "  crai status codex")
+	fmt.Fprintln(w, "  crai status gemini")
 	fmt.Fprintln(w, "  crai uninstall claude")
 	fmt.Fprintln(w, "  crai uninstall codex")
+	fmt.Fprintln(w, "  crai uninstall gemini")
 	fmt.Fprintln(w, "  crai notify --source claude")
 	fmt.Fprintln(w, "  crai notify --source codex")
+	fmt.Fprintln(w, "  crai notify --source gemini")
 	fmt.Fprintln(w, "  crai [legacy-options] <command> [args...]")
 }
 
@@ -170,6 +186,28 @@ func runInstall(args []string) error {
 		}
 		fmt.Printf("installed claude hook in %s\n", updated)
 		return nil
+	case "gemini":
+		state, err := inspectGeminiAfterAgentHook()
+		if err != nil {
+			return err
+		}
+		if !state.ExecutableStable {
+			return fmt.Errorf("refusing to install from unstable executable path: %s\nbuild or install crai first, then rerun", state.ExecutablePath)
+		}
+		if state.Installed {
+			fmt.Printf("gemini hook already installed in %s\n", state.ConfigPath)
+			return nil
+		}
+		updated, err := upsertGeminiAfterAgentHook(state.ConfigPath, state.ExpectedCommand)
+		if err != nil {
+			return err
+		}
+		if state.Drifted {
+			fmt.Printf("updated gemini hook in %s\n", updated)
+			return nil
+		}
+		fmt.Printf("installed gemini hook in %s\n", updated)
+		return nil
 	default:
 		return fmt.Errorf("unsupported install target: %s", args[0])
 	}
@@ -219,6 +257,32 @@ func runStatus(args []string) error {
 			return err
 		}
 		fmt.Printf("target: claude\n")
+		fmt.Printf("config: %s\n", state.ConfigPath)
+		if !state.ConfigExists {
+			fmt.Printf("status: not installed\n")
+			return nil
+		}
+		switch {
+		case state.Installed:
+			fmt.Printf("status: installed\n")
+		case state.Drifted:
+			fmt.Printf("status: drifted\n")
+		default:
+			fmt.Printf("status: not installed\n")
+		}
+		for _, command := range state.CurrentCommands {
+			fmt.Printf("hook: %s\n", strconv.Quote(command))
+		}
+		if state.Drifted {
+			fmt.Printf("expected: %s\n", strconv.Quote(state.ExpectedCommand))
+		}
+		return nil
+	case "gemini":
+		state, err := inspectGeminiAfterAgentHook()
+		if err != nil {
+			return err
+		}
+		fmt.Printf("target: gemini\n")
 		fmt.Printf("config: %s\n", state.ConfigPath)
 		if !state.ConfigExists {
 			fmt.Printf("status: not installed\n")
@@ -294,6 +358,25 @@ func runUninstall(args []string) error {
 			return nil
 		}
 		fmt.Printf("removed claude hook from %s\n", updated)
+		return nil
+	case "gemini":
+		state, err := inspectGeminiAfterAgentHook()
+		if err != nil {
+			return err
+		}
+		if state.ManagedCount == 0 {
+			fmt.Printf("gemini hook is not installed\n")
+			return nil
+		}
+		updated, removed, err := removeGeminiAfterAgentHook(state.ConfigPath)
+		if err != nil {
+			return err
+		}
+		if !removed {
+			fmt.Printf("gemini hook is not installed\n")
+			return nil
+		}
+		fmt.Printf("removed gemini hook from %s\n", updated)
 		return nil
 	default:
 		return fmt.Errorf("unsupported uninstall target: %s", args[0])
@@ -456,6 +539,14 @@ func claudeConfigPath() (string, error) {
 	return filepath.Join(home, ".claude", "settings.json"), nil
 }
 
+func geminiConfigPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".gemini", "settings.json"), nil
+}
+
 func executableInstallPath() (string, bool, error) {
 	exePath, err := os.Executable()
 	if err != nil {
@@ -519,6 +610,53 @@ func inspectClaudeStopHook() (claudeHookState, error) {
 	return state, nil
 }
 
+func inspectGeminiAfterAgentHook() (geminiHookState, error) {
+	configPath, err := geminiConfigPath()
+	if err != nil {
+		return geminiHookState{}, err
+	}
+	exePath, stable, err := executableInstallPath()
+	if err != nil {
+		return geminiHookState{}, err
+	}
+
+	state := geminiHookState{
+		ConfigPath:       configPath,
+		ExecutablePath:   exePath,
+		ExpectedCommand:  shellQuote(exePath) + " notify --source gemini",
+		ExecutableStable: stable,
+	}
+
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return state, nil
+		}
+		return geminiHookState{}, err
+	}
+	state.ConfigExists = true
+	if len(bytes.TrimSpace(content)) == 0 {
+		return state, nil
+	}
+
+	var root map[string]any
+	if err := json.Unmarshal(content, &root); err != nil {
+		return geminiHookState{}, err
+	}
+
+	commands := collectGeminiManagedCommands(root)
+	state.CurrentCommands = commands
+	state.ManagedCount = len(commands)
+	if len(commands) == 1 && commands[0] == state.ExpectedCommand {
+		state.Installed = true
+		return state, nil
+	}
+	if len(commands) > 0 {
+		state.Drifted = true
+	}
+	return state, nil
+}
+
 func upsertClaudeStopHook(path string, expectedCommand string) (string, error) {
 	root, err := loadJSONConfig(path)
 	if err != nil {
@@ -567,6 +705,60 @@ func upsertClaudeStopHook(path string, expectedCommand string) (string, error) {
 	})
 
 	hooks["Stop"] = cleaned
+	if err := writeJSONConfig(path, root, 0o600); err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+func upsertGeminiAfterAgentHook(path string, expectedCommand string) (string, error) {
+	root, err := loadJSONConfig(path)
+	if err != nil {
+		return "", err
+	}
+
+	hooks := getOrCreateMap(root, "hooks")
+	afterAgentEntries := getOrCreateArray(hooks, "AfterAgent")
+
+	var cleaned []any
+	for _, entry := range afterAgentEntries {
+		group, ok := entry.(map[string]any)
+		if !ok {
+			cleaned = append(cleaned, entry)
+			continue
+		}
+		hookList, ok := group["hooks"].([]any)
+		if !ok {
+			cleaned = append(cleaned, entry)
+			continue
+		}
+
+		var nextHooks []any
+		for _, hook := range hookList {
+			hookMap, ok := hook.(map[string]any)
+			if !ok {
+				nextHooks = append(nextHooks, hook)
+				continue
+			}
+			if isGeminiManagedHookMap(hookMap) {
+				continue
+			}
+			nextHooks = append(nextHooks, hook)
+		}
+		group["hooks"] = nextHooks
+		cleaned = append(cleaned, group)
+	}
+
+	cleaned = append(cleaned, map[string]any{
+		"hooks": []any{
+			map[string]any{
+				"type":    "command",
+				"command": expectedCommand,
+			},
+		},
+	})
+
+	hooks["AfterAgent"] = cleaned
 	if err := writeJSONConfig(path, root, 0o600); err != nil {
 		return "", err
 	}
@@ -631,6 +823,75 @@ func removeClaudeStopHook(path string) (string, bool, error) {
 		delete(hooks, "Stop")
 	} else {
 		hooks["Stop"] = cleaned
+	}
+	if len(hooks) == 0 {
+		delete(root, "hooks")
+	}
+
+	if err := writeJSONConfig(path, root, 0o600); err != nil {
+		return "", false, err
+	}
+	return path, true, nil
+}
+
+func removeGeminiAfterAgentHook(path string) (string, bool, error) {
+	root, err := loadJSONConfig(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return path, false, nil
+		}
+		return "", false, err
+	}
+
+	hooks, ok := root["hooks"].(map[string]any)
+	if !ok {
+		return path, false, nil
+	}
+	afterAgentEntries, ok := hooks["AfterAgent"].([]any)
+	if !ok {
+		return path, false, nil
+	}
+
+	var (
+		removed bool
+		cleaned []any
+	)
+	for _, entry := range afterAgentEntries {
+		group, ok := entry.(map[string]any)
+		if !ok {
+			cleaned = append(cleaned, entry)
+			continue
+		}
+		hookList, ok := group["hooks"].([]any)
+		if !ok {
+			cleaned = append(cleaned, entry)
+			continue
+		}
+
+		var nextHooks []any
+		for _, hook := range hookList {
+			hookMap, ok := hook.(map[string]any)
+			if ok && isGeminiManagedHookMap(hookMap) {
+				removed = true
+				continue
+			}
+			nextHooks = append(nextHooks, hook)
+		}
+		if len(nextHooks) == 0 {
+			continue
+		}
+		group["hooks"] = nextHooks
+		cleaned = append(cleaned, group)
+	}
+
+	if !removed {
+		return path, false, nil
+	}
+
+	if len(cleaned) == 0 {
+		delete(hooks, "AfterAgent")
+	} else {
+		hooks["AfterAgent"] = cleaned
 	}
 	if len(hooks) == 0 {
 		delete(root, "hooks")
@@ -1040,6 +1301,38 @@ func collectClaudeManagedCommands(root map[string]any) []string {
 	return commands
 }
 
+func collectGeminiManagedCommands(root map[string]any) []string {
+	hooks, ok := root["hooks"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	entries, ok := hooks["AfterAgent"].([]any)
+	if !ok {
+		return nil
+	}
+
+	var commands []string
+	for _, entry := range entries {
+		group, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		hookList, ok := group["hooks"].([]any)
+		if !ok {
+			continue
+		}
+		for _, hook := range hookList {
+			hookMap, ok := hook.(map[string]any)
+			if !ok || !isGeminiManagedHookMap(hookMap) {
+				continue
+			}
+			command, _ := hookMap["command"].(string)
+			commands = append(commands, command)
+		}
+	}
+	return commands
+}
+
 func isClaudeManagedHookMap(hook map[string]any) bool {
 	hookType, _ := hook["type"].(string)
 	command, _ := hook["command"].(string)
@@ -1048,6 +1341,17 @@ func isClaudeManagedHookMap(hook map[string]any) bool {
 
 func isClaudeManagedCommand(command string) bool {
 	return strings.Contains(command, " notify --source claude") &&
+		strings.Contains(command, "crai")
+}
+
+func isGeminiManagedHookMap(hook map[string]any) bool {
+	hookType, _ := hook["type"].(string)
+	command, _ := hook["command"].(string)
+	return hookType == "command" && isGeminiManagedCommand(command)
+}
+
+func isGeminiManagedCommand(command string) bool {
+	return strings.Contains(command, " notify --source gemini") &&
 		strings.Contains(command, "crai")
 }
 
