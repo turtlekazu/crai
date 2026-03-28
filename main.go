@@ -33,6 +33,13 @@ const (
 	minWorkingDuration = 5 * time.Second
 )
 
+const (
+	ansiReset  = "\033[0m"
+	ansiGreen  = "\033[32m"
+	ansiYellow = "\033[33m"
+	ansiRed    = "\033[31m"
+)
+
 var errCodexNotifyConflict = errors.New("codex notify is already configured by another command")
 
 type monitor struct {
@@ -235,19 +242,19 @@ func runStatus(args []string) error {
 		fmt.Printf("integration: notify command\n")
 		fmt.Printf("config: %s\n", state.ConfigPath)
 		if !state.ConfigExists {
-			fmt.Printf("status: not installed\n")
+			printStatusLine("not installed")
 			fmt.Printf("next: run `crai install codex`\n")
 			return nil
 		}
 		switch {
 		case state.Installed:
-			fmt.Printf("status: installed\n")
+			printStatusLine("installed")
 		case state.Drifted:
-			fmt.Printf("status: drifted\n")
+			printStatusLine("drifted")
 		case len(state.CurrentCommand) == 0:
-			fmt.Printf("status: not installed\n")
+			printStatusLine("not installed")
 		default:
-			fmt.Printf("status: conflict\n")
+			printStatusLine("conflict")
 		}
 		if len(state.CurrentCommand) > 0 {
 			fmt.Printf("notify: %s\n", formatCommand(state.CurrentCommand))
@@ -269,17 +276,17 @@ func runStatus(args []string) error {
 		fmt.Printf("integration: Stop hook\n")
 		fmt.Printf("config: %s\n", state.ConfigPath)
 		if !state.ConfigExists {
-			fmt.Printf("status: not installed\n")
+			printStatusLine("not installed")
 			fmt.Printf("next: run `crai install claude`\n")
 			return nil
 		}
 		switch {
 		case state.Installed:
-			fmt.Printf("status: installed\n")
+			printStatusLine("installed")
 		case state.Drifted:
-			fmt.Printf("status: drifted\n")
+			printStatusLine("drifted")
 		default:
-			fmt.Printf("status: not installed\n")
+			printStatusLine("not installed")
 		}
 		for _, command := range state.CurrentCommands {
 			fmt.Printf("hook: %s\n", strconv.Quote(command))
@@ -301,17 +308,17 @@ func runStatus(args []string) error {
 		fmt.Printf("integration: AfterAgent hook\n")
 		fmt.Printf("config: %s\n", state.ConfigPath)
 		if !state.ConfigExists {
-			fmt.Printf("status: not installed\n")
+			printStatusLine("not installed")
 			fmt.Printf("next: run `crai install gemini`\n")
 			return nil
 		}
 		switch {
 		case state.Installed:
-			fmt.Printf("status: installed\n")
+			printStatusLine("installed")
 		case state.Drifted:
-			fmt.Printf("status: drifted\n")
+			printStatusLine("drifted")
 		default:
-			fmt.Printf("status: not installed\n")
+			printStatusLine("not installed")
 		}
 		for _, command := range state.CurrentCommands {
 			fmt.Printf("hook: %s\n", strconv.Quote(command))
@@ -1409,6 +1416,23 @@ func emitNotification(agentName string, opts notificationOptions) {
 		_, _ = tty.Write([]byte("\a"))
 		_ = tty.Close()
 	}
+}
+
+func printStatusLine(status string) {
+	if term.IsTerminal(int(os.Stdout.Fd())) {
+		switch status {
+		case "installed":
+			fmt.Printf("status: %s%s%s\n", ansiGreen, status, ansiReset)
+			return
+		case "drifted", "conflict":
+			fmt.Printf("status: %s%s%s\n", ansiYellow, status, ansiReset)
+			return
+		case "not installed":
+			fmt.Printf("status: %s%s%s\n", ansiRed, status, ansiReset)
+			return
+		}
+	}
+	fmt.Printf("status: %s\n", status)
 }
 
 func (m *monitor) onPTYOutput() {
