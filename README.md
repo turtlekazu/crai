@@ -22,6 +22,37 @@ Like a catcher in the semiconductor fields — though standing at the cliff's ed
 
 ---
 
+## Install
+
+```sh
+brew install turtlekazu/tap/crai
+```
+
+Or build from source:
+
+```sh
+git clone https://github.com/turtlekazu/crai
+cd crai
+go build -o crai .
+sudo mv crai /usr/local/bin/
+```
+
+## Quick Start
+
+```sh
+# Claude Code
+crai install claude
+claude
+
+# Codex
+crai install codex
+codex
+
+# Gemini CLI
+crai install gemini
+gemini
+```
+
 ## Hook Mode
 
 ```text
@@ -113,23 +144,6 @@ The original wrapper mode is still available, but it is now the fallback path ra
 - **Quick-response suppression** — if the AI responds in under 5 seconds, no notification fires (you're probably still watching)
 - **Typing suppression** — no notification while you're actively composing your next message
 
----
-
-## Install
-
-```sh
-brew install turtlekazu/tap/crai
-```
-
-Or build from source:
-
-```sh
-git clone https://github.com/turtlekazu/crai
-cd crai
-go build -o crai .
-sudo mv crai /usr/local/bin/
-```
-
 ## Uninstall
 
 ```sh
@@ -139,30 +153,7 @@ brew untap turtlekazu/tap
 
 ---
 
-## Usage
-
-### Codex
-
-```sh
-crai install codex
-codex
-```
-
-### Claude Code
-
-```sh
-crai install claude
-claude
-```
-
-### Gemini CLI
-
-```sh
-crai install gemini
-gemini
-```
-
-### Legacy wrapper
+## Legacy Wrapper
 
 ```sh
 # Wrap claude directly
