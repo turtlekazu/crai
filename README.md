@@ -24,6 +24,8 @@ Like a catcher in the semiconductor fields — though standing at the cliff's ed
 
 ## Install
 
+<img alt="version badge" src="https://img.shields.io/github/v/release/turtlekazu/crai?filter=*.*.*">
+
 ```sh
 brew install turtlekazu/tap/crai
 ```
