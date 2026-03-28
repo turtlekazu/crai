@@ -14,9 +14,9 @@
  catcher in the rAI
 ```
 
-AI CLI が注意を引くべきタイミングで、音とバナーで通知する CLI ツールです。対応 CLI にはネイティブな Hook/notify をインストールでき、現時点では Codex、Claude Code、Gemini CLI をサポートしています。従来の PTY ラッパーモードも残しています。
+AI CLI が注意を引くべきタイミングで、音とバナーで通知する CLI ツールです。対応 CLI にはネイティブな Hook/notify をインストールでき、現時点では Codex、Claude Code、Gemini CLI をサポートしています。非対応のAI CLIでも、PTY ラッパーモードで動作させることで、通知させることができます。
 
-半導体の畑の捕手のように —— もっとも、崖の淵で捕まえているのは、無邪気に走り回るAIエージェントであり、同時に、別のコンテキストの深みへと落ちていきそうなあなた自身の意識なのかもしれません。
+それはまるで、半導体畑の捕手のように —— もっとも、崖の淵で捕まえているのは、無邪気に走り回るAIエージェントであり、同時に、別のコンテキストの深みへと落ちていきそうなあなた自身の意識なのかもしれません。
 
 > *「ぼくはこうしようと思った。耳が聞こえないふりをするんだ……AIが考え終わるまで。」*
 
@@ -51,6 +51,13 @@ codex
 # Gemini CLI
 crai install gemini
 gemini
+```
+
+## Uninstall
+
+```sh
+brew uninstall crai
+brew untap turtlekazu/tap
 ```
 
 ## Hook モード
@@ -144,16 +151,9 @@ crai uninstall gemini
 - **短時間応答の抑制** — AI が 5 秒以内に応答した場合は通知しません（まだ画面を見ているものと判断します）
 - **入力中の抑制** — 次のメッセージを作成中は通知しません
 
-## アンインストール
-
-```sh
-brew uninstall crai
-brew untap turtlekazu/tap
-```
-
 ---
 
-## Legacy Wrapper
+## PTYモードの使い方
 
 ```sh
 # claude を直接ラップする
@@ -167,7 +167,7 @@ crai claude --dangerously-skip-permissions
 
 ---
 
-## エイリアス設定
+## エイリアス設定(PTYモード用)
 
 シェルの設定ファイル（`~/.zshrc` または `~/.bashrc`）に以下を追加してください：
 

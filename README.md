@@ -14,7 +14,7 @@
  catcher in the rAI
 ```
 
-A CLI tool that notifies you when your AI CLI needs attention. `crai` can now install native notification hooks for supported tools, currently Codex, Claude Code, and Gemini CLI, while keeping the original PTY wrapper for legacy use.
+A CLI tool that notifies you with sound and banners when your AI CLI needs attention. It can install native hooks or notification settings into supported CLIs, currently Codex, Claude Code, and Gemini CLI. Even unsupported AI CLIs can still use `crai` through the PTY wrapper mode.
 
 Like a catcher in the semiconductor fields — though standing at the cliff's edge, catching both the AI agents running wild and your own consciousness before it falls into the depths of another context.
 
@@ -51,6 +51,13 @@ codex
 # Gemini CLI
 crai install gemini
 gemini
+```
+
+## Uninstall
+
+```sh
+brew uninstall crai
+brew untap turtlekazu/tap
 ```
 
 ## Hook Mode
@@ -114,9 +121,9 @@ crai uninstall gemini
 If `~/.codex/config.toml` already has a non-`crai` `notify` command, `crai install codex` refuses to overwrite it.
 Running `crai install <agent>` again is safe. If a `crai`-managed hook has drifted, install repairs it in place.
 
-## Legacy PTY Mode
+## Traditional PTY Mode
 
-The original wrapper mode is still available, but it is now the fallback path rather than the primary one.
+The original wrapper mode is still available, but the hook-based mode is now the primary path.
 
 ```text
  +----------+   raw stdin   +-------------+   PTY   +-----------+
@@ -124,7 +131,7 @@ The original wrapper mode is still available, but it is now the fallback path ra
  |  (human) | <------------ |  (watcher)  | <------ |  (AI CLI) |
  +----------+   raw stdout  +------+------+         +-----------+
                                    |
-                   silence >= 1500ms after AI output
+                   AI output >= 1500ms silence
                                    |
                                    v
                     * Play Sound
@@ -133,9 +140,9 @@ The original wrapper mode is still available, but it is now the fallback path ra
 ```
 
 1. Spawns your command inside a **pseudo-terminal (PTY)**
-2. Bridges your raw stdin/stdout through it with zero transformation
-3. Monitors the output stream for **silence** — if no new output arrives for 1500ms, the AI is considered done
-4. On completion: fires three notifications in parallel — a system sound, a Notification Center banner, and a terminal bell
+2. Bridges raw stdin/stdout with zero transformation
+3. Watches the output stream for **silence** and treats the AI as done when no new output arrives for 1500ms or more
+4. On completion, fires three notifications at once: system sound, Notification Center banner, and terminal bell
 
 ### Smart filtering
 
@@ -144,16 +151,9 @@ The original wrapper mode is still available, but it is now the fallback path ra
 - **Quick-response suppression** — if the AI responds in under 5 seconds, no notification fires (you're probably still watching)
 - **Typing suppression** — no notification while you're actively composing your next message
 
-## Uninstall
-
-```sh
-brew uninstall crai
-brew untap turtlekazu/tap
-```
-
 ---
 
-## Legacy Wrapper
+## PTY Mode Usage
 
 ```sh
 # Wrap claude directly
@@ -163,11 +163,11 @@ crai claude
 crai claude --dangerously-skip-permissions
 ```
 
-Everything is passed through as-is. Colors, spinners, keybindings — all intact. `crai` is invisible until it isn't.
+Everything is passed through as-is. Colors, spinners, keybindings, all of it stays intact. `crai` stays out of the way until it needs to speak up.
 
 ---
 
-## Alias
+## Alias Setup (for PTY mode)
 
 Add this to your shell config (`~/.zshrc` or `~/.bashrc`):
 
@@ -176,7 +176,7 @@ alias claude="crai claude "
 ```
 
 > **Why the trailing space?**
-> In bash and zsh, a trailing space in an alias value causes the shell to also expand the next word as an alias. This means any arguments you pass after `claude` are also subject to alias expansion — preserving the full alias magic chain.
+> In bash and zsh, a trailing space at the end of an alias value makes the shell expand the next word as an alias too. That means arguments passed after `claude` still participate in alias chaining, so the whole setup keeps working cleanly.
 
 Now you just use `claude` as normal. `crai` is silently watching.
 
