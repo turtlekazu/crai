@@ -1049,12 +1049,16 @@ func readRootAssignment(content string, key string) (string, string, bool, error
 }
 
 func setRootAssignment(content string, key string, assignment string) (string, error) {
-	start, end, _, found, err := locateRootAssignment(content, key)
+	start, end, raw, found, err := locateRootAssignment(content, key)
 	if err != nil {
 		return "", err
 	}
 	if found {
-		return content[:start] + assignment + content[end:], nil
+		replacement := assignment
+		if strings.HasSuffix(raw, "\n") {
+			replacement += "\n"
+		}
+		return content[:start] + replacement + content[end:], nil
 	}
 
 	insertAt := firstRootSectionIndex(content)
